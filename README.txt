@@ -69,3 +69,9 @@ doesn't let you do that.
 
 As with other access control modules, this doesn't play nicely with multiple access control
 modules. Apparently this will be fixed with drupal 5.0, but in the meantime you're stuck. 
+
+If you deactivate/uninstall, the old entries in the node_access table stick around. I'm not sure
+if this will cause problems... If you want to get rid of it for good, make sure you run the
+following query:
+
+delete from node_access where realm = 'nodeaccess_rid' OR realm = 'nodeaccess_uid';

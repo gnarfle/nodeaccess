@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.2 2006/09/25 17:14:39 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.3 2006/09/25 19:20:09 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -111,7 +111,6 @@ function nodeaccess_page($nid) {
   $form['keys'] = array('#type' => 'textfield', '#default_value' => $edit['keys'], '#size' => 40, '#autocomplete_path' => 'user/autocomplete', );
   $form['search'] = array('#type' => 'button', '#value' => t('Search'));
 
-  $form['owndefault'] = array('#type' => 'checkbox', '#title' => t('Make these settings default for my content'));
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
   $output .= drupal_get_form('nodeaccess_page_form', $form);
   return $output;
@@ -181,12 +180,6 @@ function nodeaccess_page_form_submit($form_id, $form_values) {
 
   _nodeaccess_save_new($nid, $grants);
   drupal_set_message(t('Grants saved.'));
-
-  if ($edit['owndefault']) {
-    user_save($user, array('nodeaccess_defaults' => $grants));
-    _nodeaccess_save_default($grants, 'n.uid=%d', $user->uid);
-    drupal_set_message(t('Saved these settings as default for my content'));
-  }
 }
 
 /**
@@ -259,25 +252,33 @@ function _nodeaccess_save_new($nid, $grants) {
  * Save default values where no grant is present
  */
 function _nodeaccess_save_default($grants, $where = '', $param = '') {
+
+  $nodes = array();
+  $access = array();
+
+  // get a list of all nodes
   $result = db_query("select n.nid from {node} n where $where", $param);
-  $result2 = db_query("select na.nid from {node_access} na where na.realm = 'nodeaccess_rid' $where", $param);
-  while ($nid = db_fetch_object($result2)) {
-	  $exist[$nid->nid] = 1;
+  while ($node = db_fetch_object($result)) {
+    $nodes[] = $node->nid;
   }
-  while ($nid = db_fetch_object($result)) {
-    if (!$exist[$nid->nid]) {
-      $new[] = $nid->nid;
-    }
+  
+  // get a list of all combinations of access
+  $result = db_query("select na.nid, na.gid, na.realm from {node_access} na LEFT JOIN {node} n on na.nid = n.nid where na.realm = 'nodeaccess_rid' AND $where", $param);
+  while ($node = db_fetch_object($result)) {
+    $access[$node->nid][$node->gid] = 1;
   }
 
   foreach ($grants as $realm) {
     foreach ($realm as $grant) {
-      foreach ($new as $nid) {
-        db_query("INSERT INTO {node_access} (nid, gid, realm, grant_view, grant_update, grant_delete) values($nid, %d, '%s', %d, %d, %d)", $grant);
+      foreach ($nodes as $nid) {
+        $gid = $grant['gid'];
+        if (!isset($access[$nid][$gid])) { 
+          db_query("INSERT INTO {node_access} (nid, gid, realm, grant_view, grant_update, grant_delete) values($nid, %d, '%s', %d, %d, %d)", $grant);
+        }
       }
     }
-  }
-}
+  } 
+}  
 
 
 function nodeaccess_node_grants($user, $op) {
@@ -381,9 +382,9 @@ function nodeaccess_admin_settings_form_submit($form_id, $form_values) {
     } 
     else {
       db_query("INSERT INTO {node_access} VALUES (0, 0, 'all', 1, 0, 0)");
-      //db_query("DELETE from {node_access} where realm = 'nodeaccess_rid' OR realm = 'nodeaccess_uid'");
     }
   }
+  
   foreach($form_values['role'] as $id => $val) {
     $pref[$id] = $val;
   }
