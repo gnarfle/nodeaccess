@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.3 2006/09/25 19:20:09 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4 2006/09/26 14:12:21 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -9,12 +9,7 @@ function nodeaccess_help($section) {
     return t('Allows users to grant permissions to other users and roles.');
   }
   if (preg_match('|^node/\d+/grant|', $section)) {
-    if (user_access('administer users')) {
-      $message = t('You can set grants by roles and users.');
-    }
-    else {
-      $message = t('You can set grants per users.');
-    }
+    $message = t('You can set grants per users.');
     $message .= t(' You need to check the Keep checkbox if you want to keep the user for granting. Users with Keep checkbox checked remain in the user table between searches. Note that user rights are additional to those coming from roles.');
   }
 }
@@ -27,7 +22,7 @@ function nodeaccess_menu($may_cache) {
   $items = array();
   if ($may_cache) {
     $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('nodeaccess'),
-      'callback' => 'nodeaccess_admin', 'access' => user_access('grant node permissions'));
+      'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'));
   }
   else {
     if (arg(0) == 'node' && is_numeric(arg(1))) {
@@ -50,7 +45,7 @@ function nodeaccess_menu($may_cache) {
  * Implementation of hook_perm().
  */
 function nodeaccess_perm() {
-  return array('grant node permissions', 'grant own node permissions');
+  return array('administer nodeaccess', 'grant node permissions', 'grant own node permissions');
 }
 
 /**
