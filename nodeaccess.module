@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4 2006/09/26 14:12:21 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.1 2006/10/06 14:50:44 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -103,7 +103,14 @@ function nodeaccess_page($nid) {
 
   // deal with searching
   $form['old_keys'] = array('#type' => 'hidden', '#value' => $edit['keys']);
-  $form['keys'] = array('#type' => 'textfield', '#default_value' => $edit['keys'], '#size' => 40, '#autocomplete_path' => 'user/autocomplete', );
+  
+  // autocomplete returns errors if users don't have access to profiles
+  if (user_access('access user profiles')) {
+    $form['keys'] = array('#type' => 'textfield', '#default_value' => $edit['keys'], '#size' => 40, '#autocomplete_path' => 'user/autocomplete', );
+  } else {
+    $form['keys'] = array('#type' => 'textfield', '#default_value' => $edit['keys'], '#size' => 40);
+  }
+  
   $form['search'] = array('#type' => 'button', '#value' => t('Search'));
 
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
@@ -200,7 +207,7 @@ function _nodeaccess_populate($nid) {
       $edit['rid'][$grant->rid] = array('name' => $grant->name, 'grant_view' => $grant->grant_view, 'grant_update' => $grant->grant_update, 'grant_delete' => $grant->grant_delete);
     }
     // load uids from node_access
-    $result = db_query("SELECT uid, name FROM {node_access} na LEFT JOIN users ON uid=gid WHERE nid=%d AND realm='%s'", $nid, 'nodeaccess_uid');
+    $result = db_query("SELECT uid, name FROM {node_access} na LEFT JOIN {users} ON uid=gid WHERE nid=%d AND realm='%s'", $nid, 'nodeaccess_uid');
     while ($account = db_fetch_object($result)) {
       $edit['uid'][$account->uid] = array('name' =>  $account->name, 'keep' => 1);
     }
