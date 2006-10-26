@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.3 2006/10/26 13:44:23 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.4 2006/10/26 19:02:17 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -67,6 +67,8 @@ function nodeaccess_access($op, $node) {
 function nodeaccess_page($nid) {
   $output = '';
 
+  $node = node_load($nid);
+
   // build our form
   $edit = _nodeaccess_populate($nid);
 
@@ -115,6 +117,8 @@ function nodeaccess_page($nid) {
 
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
   $output .= drupal_get_form('nodeaccess_page_form', $form);
+
+  drupal_set_title(check_plain($node->title));
   return $output;
 }
 
