@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.2 2006/10/24 17:35:08 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.3 2006/10/26 13:44:23 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -23,12 +23,6 @@ function nodeaccess_menu($may_cache) {
   if ($may_cache) {
     $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('settings'),
       'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'));
-    $items[] = array('path' => 'admin/settings/nodeaccess/settings', 'title' => t('settings'),
-      'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'),
-      'type' => MENU_DEFAULT_LOCAL_TASK);
-    $items[] = array('path' => 'admin/settings/nodeaccess/terms', 'title' => t('terms'),
-      'callback' => 'nodeaccess_admin_terms', 'access' => user_access('administer nodeaccess'),
-      'type' => MENU_LOCAL_TASK);
   }
   else {
     if (arg(0) == 'node' && is_numeric(arg(1))) {
@@ -431,41 +425,4 @@ function nodeaccess_admin_settings_form_submit($form_id, $form_values) {
   drupal_set_message('Grants Saved', 'status');
 }
 
-function nodeaccess_admin_terms() {
-  $term_grants = variable_get('nodeaccess_term_grants', array());
-  $roles = user_roles();
-  $rows = array();  $vocabs = taxonomy_get_vocabularies();
-  foreach ($vocabs as $vocab) {
-    $form['data'][$vocab->vid] = array('#value' => $vocab->name, '#tree' => TRUE);
-    foreach (taxonomy_get_tree($vocab->vid) as $term) {
-      foreach ($roles as $rid => $role) {
-        $form['data'][$vocab->vid]['terms'][$term->tid]['roles'][$rid] = array('#type' => 'select', '#default_value' => 'i',
-                                                 '#title' => $role, '#options' => array(
-                                                                    'i' => 'I',
-                                                                    'a' => 'A',
-                                                                    'd' => 'D'));
-      }
-    }
-  }
-  $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
-  return drupal_get_form('nodeaccess_admin_terms_form', $form);                                                             
-
-}
-
-function theme_nodeaccess_admin_terms_form($form) {
-  $output = '';
-  foreach ($form['data'] as $vid => $vocabs) {
-    $output .= '<h3>' . $form['data'][$vid]['#value'] . '</h3>'; //form_render($form['data'][$vid]);
-    $rows = array();
-    foreach ($form['data'][$vid]['terms'] as $tid => $term) {
-      $row = array();
-      foreach ($term['roles'] as $rid => $role) {
-        $header[] = $role['#title'];
-        $row[] = form_render($role);
-      }
-      $rows[] = $row;
-    }
-    $output .= theme('table', $header, $rows);
-  }
-  return $output;
 ?>
