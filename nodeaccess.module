@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.4 2006/10/26 19:02:17 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.5 2006/10/27 19:24:43 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -21,7 +21,7 @@ function nodeaccess_help($section) {
 function nodeaccess_menu($may_cache) {
   $items = array();
   if ($may_cache) {
-    $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('settings'),
+    $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('nodeaccess'),
       'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'));
   }
   else {
