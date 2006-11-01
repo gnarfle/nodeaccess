@@ -1,5 +1,6 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.5 2006/10/27 19:24:43 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.6 2006/11/01 20:07:57 debtman7 Exp $
+
 
 /**
  * Implementation of hook_help().
@@ -72,7 +73,7 @@ function nodeaccess_page($nid) {
   // build our form
   $edit = _nodeaccess_populate($nid);
 
-	$roles = $edit['rid'];
+  $roles = $edit['rid'];
   $users = $edit['uid'];
 
   $form['nid'] = array('#type' => 'value', '#value' => $nid);
@@ -95,7 +96,7 @@ function nodeaccess_page($nid) {
   if (is_array($users)) {
     $form['uid'] = array('#tree' => TRUE,);
     foreach ($users as $key => $field) {
-      $form['uid'][$key]['name'] = array('#value' => $field['name'],);
+      $form['uid'][$key]['name'] = array('#type' => 'hidden', '#value' => $field['name'],);
       $form['uid'][$key]['keep'] = array('#type' => 'checkbox', '#default_value' => $field['keep']);
       $form['uid'][$key]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $field['grant_view']);
       $form['uid'][$key]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $field['grant_update']);
@@ -149,13 +150,12 @@ function theme_nodeaccess_page_form($form) {
 
   // user table
   unset($rows);
-
   $users = element_children($form['uid']);
   if (count($users) > 0) {
     $header = array('User', 'Keep?', 'View', 'Edit', 'Delete');
     foreach($users as $key) {
       $row = array();
-      $row[] = form_render($form['uid'][$key]['name']);
+      $row[] = $form['uid'][$key]['name']['#value'];
       $row[] = form_render($form['uid'][$key]['keep']);
       $row[] = form_render($form['uid'][$key]['grant_view']);
       $row[] = form_render($form['uid'][$key]['grant_update']);
