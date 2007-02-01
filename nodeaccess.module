@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.6 2006/11/01 20:07:57 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.7 2007/02/01 19:03:44 debtman7 Exp $
 
 
 /**
@@ -218,7 +218,7 @@ function _nodeaccess_populate($nid) {
   }
   // perform search
   if ($edit['keys'] && $edit['old_keys'] != $edit['keys']) {
-    $sql = "SELECT uid, name FROM {users} WHERE name LIKE \"%%%s%%\"";
+    $sql = "SELECT uid, name FROM {users} WHERE name LIKE '%%%s%%'";
     $params = array(preg_replace('!\*+!', '%', $edit['keys']));
     if (is_array($edit['uid'])) {
       $sql .= ' AND uid NOT IN (%s)';
