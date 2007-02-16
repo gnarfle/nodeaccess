@@ -9,23 +9,19 @@ that node.
 
 WARNINGS!
 
-This module has been used mainly by me and has not been thoroughly tested. Using it on a
-production system is probably not a good idea! With that said, I've been using it in a 
-production environment for several months and have not had any problems, but use at your
-own risk.
+This is a development version for drupal 5.x. It has not been tested
+extensively, and the upgrade process is rather complicated. Please do not throw
+it on a production system. If you really need this module ASAP, please test it
+out on a development copy of your website first.
 
 INSTALLATION:
 
 Put the module in your drupal modules directory and enable it in admin/modules.
 
-NOTE: This installs the module but it is not yet active.
-
-To enable the module, visit admin/settings/nodeaccess. In order for this module to work,
-the default drupal permission (which allows anyone to view any node) has to be deleted. To
-do this, check the Enable box on the admin page. Note that if you have already installed
-an access control module which performed this task, this may already be checked.
-
-To return to normal drupal permissions, uncheck the enable box and submit the form.
+If you are upgrading, be sure to run update.php as several changes are
+required. This attempts to migrate your previous settings to the new setup in
+drupal 5. I would strongly recommend backing up your database before installing
+this module...
 
 IMPORTANT!
 
@@ -67,11 +63,6 @@ to edit a node except for one user, you cannot do this by granted edit permissio
 authenticated users, then adding the user to the node without view permissions. Drupal
 doesn't let you do that.
 
-As with other access control modules, this doesn't play nicely with multiple access control
-modules. Apparently this will be fixed with drupal 5.0, but in the meantime you're stuck. 
+I haven't fully explored using this with multiple access control modules in
+drupal 5 yet, so YMMV.
 
-If you deactivate/uninstall, the old entries in the node_access table stick around. I'm not sure
-if this will cause problems... If you want to get rid of it for good, make sure you run the
-following query:
-
-delete from node_access where realm = 'nodeaccess_rid' OR realm = 'nodeaccess_uid';
