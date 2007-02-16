@@ -1,14 +1,13 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7 2007/02/01 19:03:44 debtman7 Exp $
-
+// $Id: nodeaccess.module,v 1.4.2.7.2.1 2007/02/16 20:39:23 debtman7 Exp $
+// big todo:
+// - if all perms are 0, then don't write to the db...
+//
 
 /**
  * Implementation of hook_help().
  */
 function nodeaccess_help($section) {
-  if ($section == 'admin/modules#description') {
-    return t('Allows users to grant permissions to other users and roles.');
-  }
   if (preg_match('|^node/\d+/grant|', $section)) {
     $message = t('You can set grants per users.');
     $message .= t(' You need to check the Keep checkbox if you want to keep the user for granting. Users with Keep checkbox checked remain in the user table between searches. Note that user rights are additional to those coming from roles.');
@@ -22,8 +21,10 @@ function nodeaccess_help($section) {
 function nodeaccess_menu($may_cache) {
   $items = array();
   if ($may_cache) {
-    $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('nodeaccess'),
-      'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'));
+    $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('Nodeaccess'),
+      'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'),
+      'description' => t('Change default settings for the nodeaccess module')
+    );
   }
   else {
     if (arg(0) == 'node' && is_numeric(arg(1))) {
@@ -31,7 +32,7 @@ function nodeaccess_menu($may_cache) {
       $types = variable_get('nodeaccess-types', array());
       global $user;
       if ($node->nid && $types[$node->type] && (user_access('grant node permissions') || (user_access('grant own node permissions') && $node->uid == $user->uid))) {
-        $items[] = array('path' => 'node/'. $node->nid .'/grant', 'title' => t('grant'),
+        $items[] = array('path' => 'node/'. $node->nid .'/grant', 'title' => t('Grant'),
           'callback' => 'nodeaccess_page', 'callback arguments' => $node->nid,
           'access' => nodeaccess_access('grant', $node),
           'weight' => 5,
@@ -66,9 +67,14 @@ function nodeaccess_access($op, $node) {
  * Menu callback. Draws the page.
  */
 function nodeaccess_page($nid) {
-  $output = '';
+  $output = drupal_get_form('nodeaccess_grants_form', $nid);
+  
+  drupal_set_title(check_plain($node->title));
+  return $output;
+}
 
-  $node = node_load($nid);
+function nodeaccess_grants_form($nid) {
+    $node = node_load($nid);
 
   // build our form
   $edit = _nodeaccess_populate($nid);
@@ -117,23 +123,21 @@ function nodeaccess_page($nid) {
   $form['search'] = array('#type' => 'button', '#value' => t('Search'));
 
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
-  $output .= drupal_get_form('nodeaccess_page_form', $form);
 
-  drupal_set_title(check_plain($node->title));
-  return $output;
+  return $form;
 }
 
-function theme_nodeaccess_page_form($form) {
+function theme_nodeaccess_grants_form($form) {
   // role table
   $roles = element_children($form['rid']);
   if (count($roles) > 0) {
     $header = array('Role', 'View', 'Edit', 'Delete');
     foreach($roles as $key) {
       $row = array();
-      $row[] = $form['rid'][$key]['name']['#value'] . form_render($form['rid'][$key]['name']);
-      $row[] = form_render($form['rid'][$key]['grant_view']);
-      $row[] = form_render($form['rid'][$key]['grant_update']);
-      $row[] = form_render($form['rid'][$key]['grant_delete']);
+      $row[] = $form['rid'][$key]['name']['#value'] . drupal_render($form['rid'][$key]['name']);
+      $row[] = drupal_render($form['rid'][$key]['grant_view']);
+      $row[] = drupal_render($form['rid'][$key]['grant_update']);
+      $row[] = drupal_render($form['rid'][$key]['grant_delete']);
       $rows[] = $row;
     }
     $output .= theme('table', $header, $rows);
@@ -143,9 +147,9 @@ function theme_nodeaccess_page_form($form) {
   $output .= '<p /><div class="search-form">';
   $output .= '<b>Enter names to search for users:</b>';
   $output .= '<div class="container-inline">';
-  $output .= form_render($form['old_keys']);
-  $output .= form_render($form['keys']);
-  $output .= form_render($form['search']);
+  $output .= drupal_render($form['old_keys']);
+  $output .= drupal_render($form['keys']);
+  $output .= drupal_render($form['search']);
   $output .= '</div></div>';
 
   // user table
@@ -156,44 +160,58 @@ function theme_nodeaccess_page_form($form) {
     foreach($users as $key) {
       $row = array();
       $row[] = $form['uid'][$key]['name']['#value'];
-      $row[] = form_render($form['uid'][$key]['keep']);
-      $row[] = form_render($form['uid'][$key]['grant_view']);
-      $row[] = form_render($form['uid'][$key]['grant_update']);
-      $row[] = form_render($form['uid'][$key]['grant_delete']);
+      $row[] = drupal_render($form['uid'][$key]['keep']);
+      $row[] = drupal_render($form['uid'][$key]['grant_view']);
+      $row[] = drupal_render($form['uid'][$key]['grant_update']);
+      $row[] = drupal_render($form['uid'][$key]['grant_delete']);
       $rows[] = $row;
     }
     $output .= theme('table', $header, $rows);
   }
 	
-  $output .= form_render($form);
+  $output .= drupal_render($form);
 
   return $output;
 }
 
-function nodeaccess_page_form_submit($form_id, $form_values) {	
+function nodeaccess_grants_form_submit($form_id, $form_values) {	
   global $user;
   $grants = array();
-
   $nid = $form_values['nid'];
+  $save = array();
   foreach (array('uid', 'rid') as $type) {
     if (is_array($form_values[$type])) {
+      $grants = array();
+      $realm = 'nodeaccess_' . $type;
       foreach ($form_values[$type] as $gid => $line) {
         $realm = 'nodeaccess_'. $type;
-        $grants[$realm][$gid] = array($gid, $realm, $line['grant_view'], $line['grant_update'], $line['grant_delete']);
+        // check the settings, no need for an entry if no perms are granted
+        if ($line['grant_view'] || $line['grant_update'] || $line['grant_delete']) {
+          $grant = array('gid' => $gid, 'realm' => $realm, 'grant_view' => $line['grant_view'], 
+            'grant_update' => $line['grant_update'], 'grant_delete' => $line['grant_delete']);
+          $grants[] = $grant;
+          $save[] = $grant;
+        }
       }
-    } 
+      $node->nid = $nid; 
+      node_access_write_grants($node, $grants, $realm);
+    }
   }
+  // save it to our own table, thanks to the new api....
+  _nodeaccess_save_new($nid, $save);
 
-  _nodeaccess_save_new($nid, $grants);
   drupal_set_message(t('Grants saved.'));
 }
 
 /**
  * Popupate $edit. Loads all roles, gathers uids from node_access and search,
  * and calculates the grants for the users.
+ *
+ * This queries the node_access tables, but it doesn't write so hopefully that's ok
+ *
  */
 function _nodeaccess_populate($nid) {
-  $edit = $_POST['edit'];
+  $edit = $_POST;
   //dprint_r($edit);
   // delete what is not kept
   if (is_array($edit['uid'])) {
@@ -244,46 +262,12 @@ function _nodeaccess_populate($nid) {
 }
 
 function _nodeaccess_save_new($nid, $grants) {
-  db_query("DELETE FROM {node_access} WHERE nid=%d AND (realm = 'nodeaccess_uid' or realm = 'nodeaccess_rid')", $nid, implode("','", array_keys($grants)));
-
-  foreach ($grants as $realm) {
-    foreach ($realm as $grant) {
-      $grant[] = $nid;
-      db_query("INSERT INTO {node_access} (gid, realm, grant_view, grant_update, grant_delete, nid) VALUES (%d, '%s', %d, %d, %d, %d)", $grant);
-    }
+  db_query("DELETE FROM {nodeaccess} WHERE nid=%d", $nid);
+  foreach ($grants as $grant) {
+    db_query("INSERT INTO {nodeaccess} (nid, gid, realm, grant_view, grant_update, grant_delete) VALUES (%d, %d, '%s', %d, %d, %d)",
+      $nid, $grant['gid'], $grant['realm'], $grant['grant_view'], $grant['grant_update'], $grant['grant_delete']);
   }
-}
-
-/**
- * Save default values where no grant is present
- */
-function _nodeaccess_save_default($grants, $where = '', $param = '') {
-
-  $nodes = array();
-  $access = array();
-
-  // get a list of all nodes
-  $result = db_query("select n.nid from {node} n where $where", $param);
-  while ($node = db_fetch_object($result)) {
-    $nodes[] = $node->nid;
-  }
-  
-  // get a list of all combinations of access
-  $result = db_query("select na.nid, na.gid, na.realm from {node_access} na LEFT JOIN {node} n on na.nid = n.nid where na.realm = 'nodeaccess_rid' AND $where", $param);
-  while ($node = db_fetch_object($result)) {
-    $access[$node->nid][$node->gid] = 1;
-  }
-
-  foreach ($grants as $realm) {
-    foreach ($realm as $gid => $grant) {
-      foreach ($nodes as $nid) {
-        if (!isset($access[$nid][$gid])) { 
-          db_query("INSERT INTO {node_access} (nid, gid, realm, grant_view, grant_update, grant_delete) values($nid, %d, '%s', %d, %d, %d)", $grant);
-        }
-      }
-    }
-  } 
-}  
+} 
 
 
 function nodeaccess_node_grants($user, $op) {
@@ -299,10 +283,10 @@ function nodeaccess_nodeapi(&$node, $op) {
   switch ($op) {
     case 'insert':
     $grants = $user->nodeaccess_defaults ? $user->nodeaccess_defaults : variable_get('nodeaccess_'. $node->type, array());
-    _nodeaccess_save_new($node->nid, $grants);
+    node_access_write_grants($node, $grants, 'nodeaccess_rid');
     break;
   case 'delete':
-    db_query('DELETE FROM {node_access} WHERE nid=%d', $node->nid);
+    db_query('DELETE FROM {nodeaccess} WHERE nid=%d', $node->nid);
     break;
   }
 }
@@ -310,19 +294,13 @@ function nodeaccess_nodeapi(&$node, $op) {
 function nodeaccess_admin() {
   // define our settings form
   // need to set defaults from variable_get
+  return drupal_get_form('nodeaccess_admin_form');
+}
+
+function nodeaccess_admin_form() {
   $show = variable_get('nodeaccess-types', array());
   $roles = user_roles();
   $useroles = variable_get('nodeaccess-roles', array());
-
-  // check if node_access table is set up properly
-  $result = db_query("SELECT * FROM {node_access} WHERE nid = 0 AND gid = 0 AND realm = 'all' AND grant_view = 1 AND grant_update = 0 AND grant_delete = 0");
-  if (db_num_rows($result) > 0) {
-    $enabled = 0;
-  } 
-  else {
-    $enabled = 1;
-  }
-  $form['enabled'] = array('#type' => 'checkbox', '#title' => 'Enable', '#default_value' => $enabled, '#description' => t('By default, drupal has a node access setting to allow anyone to view any node. Enabling this module will delete this entry. To reset this, uncheck the box and submit this page again.'));
 
   $form['role'] =  array('#type' => 'fieldset', '#collapsible' => TRUE, '#collapsed' => TRUE, '#title' => t('Allowed Roles'), '#tree' => TRUE, );
   foreach ($roles as $id => $role) {
@@ -333,7 +311,7 @@ function nodeaccess_admin() {
     $form['nodeaccess'][$type] = array('#type' => 'fieldset',
                                        '#collapsible' => TRUE,
                                        '#collapsed' => TRUE,
-                                       '#title' => $name,
+                                       '#title' => $name->name,
                                        '#tree' => TRUE,
                                        '#theme' => 'nodeaccess_admin_fieldset',
                                        );
@@ -344,78 +322,51 @@ function nodeaccess_admin() {
                                                );
 
     $perms = variable_get('nodeaccess_' . $type, array());
+    foreach ($perms as $perm) {
+      $opts[$perm['gid']] = $perm;
+    }
     // go through our roles
     foreach (user_roles() as $id => $role) {
       $form['nodeaccess'][$type]['roles'][$id]['name'] = array('#value' => $role);
-      $form['nodeaccess'][$type]['roles'][$id]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $perms['rid'][$id]['grant_view'], );  	                          
-      $form['nodeaccess'][$type]['roles'][$id]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $perms['rid'][$id]['grant_update'],);
-      $form['nodeaccess'][$type]['roles'][$id]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $perms['rid'][$id]['grant_delete'], );  	                                             
+      $form['nodeaccess'][$type]['roles'][$id]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_view'], );
+      $form['nodeaccess'][$type]['roles'][$id]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_update'],);
+      $form['nodeaccess'][$type]['roles'][$id]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_delete'], );  	                                             
     }
   }
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
-  return drupal_get_form('nodeaccess_admin_settings_form', $form);
+  return $form;
 }
 
 function theme_nodeaccess_admin_fieldset($form) {
-  $output = form_render($form['show']);
+  $output = drupal_render($form['show']);
   $roles = element_children($form['roles']);
   $header = array('Role', 'View', 'Edit', 'Delete');
   foreach ($roles as $role) {
     $row = array();
-    $row[] = form_render($form['roles'][$role]['name']);
-    $row[] = form_render($form['roles'][$role]['grant_view']);
-    $row[] = form_render($form['roles'][$role]['grant_update']);
-    $row[] = form_render($form['roles'][$role]['grant_delete']);
+    $row[] = drupal_render($form['roles'][$role]['name']);
+    $row[] = drupal_render($form['roles'][$role]['grant_view']);
+    $row[] = drupal_render($form['roles'][$role]['grant_update']);
+    $row[] = drupal_render($form['roles'][$role]['grant_delete']);
     $rows[] = $row;
   }
   $output .= theme('table', $header, $rows);
   return $output;
 }
 
-function nodeaccess_admin_settings_form_submit($form_id, $form_values) {
-  // check for enabled
-  $result = db_query("SELECT * FROM {node_access} WHERE nid = 0 AND gid = 0 AND realm = 'all' AND grant_view = 1 AND grant_update = 0 AND grant_delete = 0");
-  if (db_num_rows($result) > 0) {
-    $enabled = 0;
-  } 
-  else {
-    $enabled = 1;
-  }
-  if ($enabled != $form_values['enabled']) {
-    if ($form_values['enabled']) {
-      db_query('DELETE FROM {node_access} WHERE nid=0 AND gid=0 AND realm=\'all\'');
-    } 
-    else {
-      db_query("INSERT INTO {node_access} VALUES (0, 0, 'all', 1, 0, 0)");
-    }
-  }
-  
+function nodeaccess_admin_form_submit($form_id, $form_values) {
   foreach($form_values['role'] as $id => $val) {
     $pref[$id] = $val;
   }
 
   variable_set('nodeaccess-roles', $pref);
 
-  foreach(node_get_types() as $type => $name) {
-    $grants = variable_get('nodeaccess_' . $type, array());
-    $nids = array();
-    $result = db_query("SELECT na.nid FROM {node_access} na LEFT JOIN {node} n ON na.nid=n.nid WHERE type='%s'", $type);
-    while ($node = db_fetch_object($result)) {
-      $nids[] = $node->nid;
-    }
-    if (!empty($nids) && isset($grants['rid'])) {
-      foreach ($grants['rid'] as $grant) {
-        $grant[] = implode(',', $nids);
-        db_query("DELETE FROM {node_access} WHERE gid=%d AND realm='%s' AND grant_view=%d AND grant_update=%d AND grant_delete=%d AND nid IN (%s)", $grant);
-      }
-    }
+  foreach(node_get_types() as $type => $name) {    
     $grants = array();
     // update grants
     foreach ($form_values[$type]['roles'] as $role => $val) {
-      $grants['rid'][$role] = array($role, 'nodeaccess_rid', 'grant_view' => $val['grant_view'], 'grant_update' => $val['grant_update'], 'grant_delete' => $val['grant_delete']);
+      $grants[] = array('gid' => $role, 'realm' => 'nodeaccess_rid', 'grant_view' => $val['grant_view'], 'grant_update' => $val['grant_update'], 'grant_delete' => $val['grant_delete']);
     }
     variable_set('nodeaccess_' . $type, $grants);
-    _nodeaccess_save_default($grants, "n.type='%s'", $type);
     if ($form_values[$type]['show']) {	
       $showing[$type] = 1;
     } 
@@ -425,8 +376,54 @@ function nodeaccess_admin_settings_form_submit($form_id, $form_values) {
   }
 
   variable_set('nodeaccess-types', $showing);
-
+  node_access_rebuild();
   drupal_set_message('Grants Saved', 'status');
 }
+
+function nodeaccess_node_access_records($node) {
+  if (nodeaccess_disabling()) {
+    return;
+  }
+
+  // need to figure out if we're going for the defaults, or if this node has a preference
+  $default = variable_get('nodeaccess_' . $node->type, array());
+  
+  $result = db_query("SELECT nid, gid, realm, grant_view, grant_update, grant_delete FROM nodeaccess where nid = %d", $node->nid);
+  if (db_num_rows($result) < 1) {
+    $grants = $default;
+  } else {
+    // this node has a custom access set apart from the defaults, so return that
+    $grants = array();
+    while ($row = db_fetch_object($result)) {
+      $grants[] = array(
+        'realm' => $row->realm,
+        'gid' => $row->gid,
+        'grant_view' => $row->grant_view,
+        'grant_update' => $row->grant_update,
+        'grant_delete' => $row->grant_delete,
+        'priority' => 0
+      );
+    }
+    return $grants;
+  }
+  return $grants;
+}
+
+function nodeaccess_enable() {
+  node_access_rebuild();
+}
+
+function nodeaccess_disable() {
+  nodeaccess_disabling(TRUE);
+  node_access_rebuild();
+}
+
+function nodeaccess_disabling($set = NULL) {
+  static $disabling = false;
+  if ($set !== NULL) {
+    $disabling = $set;
+  }
+  return $disabling;
+} 
 
 ?>
