@@ -1,8 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.1 2007/02/16 20:39:23 debtman7 Exp $
-// big todo:
-// - if all perms are 0, then don't write to the db...
-//
+// $Id: nodeaccess.module,v 1.4.2.7.2.2 2007/02/22 15:13:56 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -68,7 +65,8 @@ function nodeaccess_access($op, $node) {
  */
 function nodeaccess_page($nid) {
   $output = drupal_get_form('nodeaccess_grants_form', $nid);
-  
+ 
+  $node = node_load($nid); 
   drupal_set_title(check_plain($node->title));
   return $output;
 }
@@ -131,7 +129,7 @@ function theme_nodeaccess_grants_form($form) {
   // role table
   $roles = element_children($form['rid']);
   if (count($roles) > 0) {
-    $header = array('Role', 'View', 'Edit', 'Delete');
+    $header = array(t('Role'), t('View'), t('Edit'), t('Delete'));
     foreach($roles as $key) {
       $row = array();
       $row[] = $form['rid'][$key]['name']['#value'] . drupal_render($form['rid'][$key]['name']);
@@ -145,7 +143,7 @@ function theme_nodeaccess_grants_form($form) {
 
   // search form
   $output .= '<p /><div class="search-form">';
-  $output .= '<b>Enter names to search for users:</b>';
+  $output .= '<b>' . t('Enter names to search for users:') . '</b>';
   $output .= '<div class="container-inline">';
   $output .= drupal_render($form['old_keys']);
   $output .= drupal_render($form['keys']);
@@ -156,7 +154,7 @@ function theme_nodeaccess_grants_form($form) {
   unset($rows);
   $users = element_children($form['uid']);
   if (count($users) > 0) {
-    $header = array('User', 'Keep?', 'View', 'Edit', 'Delete');
+    $header = array(t('User'), t('Keep?'), t('View'), t('Edit'), t('Delete'));
     foreach($users as $key) {
       $row = array();
       $row[] = $form['uid'][$key]['name']['#value'];
@@ -340,7 +338,7 @@ function nodeaccess_admin_form() {
 function theme_nodeaccess_admin_fieldset($form) {
   $output = drupal_render($form['show']);
   $roles = element_children($form['roles']);
-  $header = array('Role', 'View', 'Edit', 'Delete');
+  $header = array(t('Role'), t('View'), t('Edit'), t('Delete'));
   foreach ($roles as $role) {
     $row = array();
     $row[] = drupal_render($form['roles'][$role]['name']);
@@ -377,7 +375,7 @@ function nodeaccess_admin_form_submit($form_id, $form_values) {
 
   variable_set('nodeaccess-types', $showing);
   node_access_rebuild();
-  drupal_set_message('Grants Saved', 'status');
+  drupal_set_message(t('Grants Saved'), 'status');
 }
 
 function nodeaccess_node_access_records($node) {
@@ -388,7 +386,7 @@ function nodeaccess_node_access_records($node) {
   // need to figure out if we're going for the defaults, or if this node has a preference
   $default = variable_get('nodeaccess_' . $node->type, array());
   
-  $result = db_query("SELECT nid, gid, realm, grant_view, grant_update, grant_delete FROM nodeaccess where nid = %d", $node->nid);
+  $result = db_query("SELECT nid, gid, realm, grant_view, grant_update, grant_delete FROM {nodeaccess} where nid = %d", $node->nid);
   if (db_num_rows($result) < 1) {
     $grants = $default;
   } else {

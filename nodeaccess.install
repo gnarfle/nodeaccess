@@ -1,6 +1,31 @@
 <?php
 
 function nodeaccess_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {nodeaccess} (
+          nid int(10) unsigned NOT NULL default '0',
+          gid int(10) unsigned NOT NULL default '0',
+          realm varchar(255) NOT NULL default '',
+          grant_view tinyint(1) unsigned NOT NULL default '0',
+          grant_update tinyint(1) unsigned NOT NULL default '0',
+          grant_delete tinyint(1) unsigned NOT NULL default '0',
+          PRIMARY KEY  (nid,gid,realm)
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      break;
+    case 'pgsql':
+      db_query("CREATE TABLE {nodeaccess} (
+        nid int_unsigned NOT NULL default '0',
+        gid int_unsigned NOT NULL default '0',
+        realm varchar(255) NOT NULL default '',
+        grant_view smallint_unsigned NOT NULL default '0',
+        grant_update smallint_unsigned NOT NULL default '0',
+        grant_delete smallint_unsigned NOT NULL default '0',
+        PRIMARY KEY (nid,gid,realm)
+      )");
+    break;
+  }
 }
 
 function nodeaccess_update_1() {
