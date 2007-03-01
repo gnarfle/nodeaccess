@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.2 2007/02/22 15:13:56 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.7.2.3 2007/03/01 14:57:24 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -20,8 +20,7 @@ function nodeaccess_menu($may_cache) {
   if ($may_cache) {
     $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('Nodeaccess'),
       'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'),
-      'description' => t('Change default settings for the nodeaccess module')
-    );
+      'description' => t('Change default settings for the nodeaccess module'));
   }
   else {
     if (arg(0) == 'node' && is_numeric(arg(1))) {
@@ -84,11 +83,11 @@ function nodeaccess_grants_form($nid) {
 	
   // roles table
   if (is_array($roles)) {
-    $form['rid'] = array('#tree' => TRUE,);
+    $form['rid'] = array('#tree' => TRUE);
     $allowed = variable_get('nodeaccess-roles', array());
     foreach ($roles as $key => $field) {
     if ($allowed[$key]) {
-      $form['rid'][$key]['name'] = array('#type' => 'hidden', '#value' => $field['name'],);
+      $form['rid'][$key]['name'] = array('#type' => 'hidden', '#value' => $field['name']);
       $form['rid'][$key]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $field['grant_view']);
       $form['rid'][$key]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $field['grant_update']);
       $form['rid'][$key]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $field['grant_delete']);
@@ -98,9 +97,9 @@ function nodeaccess_grants_form($nid) {
 
   // users table
   if (is_array($users)) {
-    $form['uid'] = array('#tree' => TRUE,);
+    $form['uid'] = array('#tree' => TRUE);
     foreach ($users as $key => $field) {
-      $form['uid'][$key]['name'] = array('#type' => 'hidden', '#value' => $field['name'],);
+      $form['uid'][$key]['name'] = array('#type' => 'hidden', '#value' => $field['name']);
       $form['uid'][$key]['keep'] = array('#type' => 'checkbox', '#default_value' => $field['keep']);
       $form['uid'][$key]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $field['grant_view']);
       $form['uid'][$key]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $field['grant_update']);
@@ -113,8 +112,9 @@ function nodeaccess_grants_form($nid) {
   
   // autocomplete returns errors if users don't have access to profiles
   if (user_access('access user profiles')) {
-    $form['keys'] = array('#type' => 'textfield', '#default_value' => $edit['keys'], '#size' => 40, '#autocomplete_path' => 'user/autocomplete', );
-  } else {
+    $form['keys'] = array('#type' => 'textfield', '#default_value' => $edit['keys'], '#size' => 40, '#autocomplete_path' => 'user/autocomplete');
+  } 
+  else {
     $form['keys'] = array('#type' => 'textfield', '#default_value' => $edit['keys'], '#size' => 40);
   }
   
@@ -130,7 +130,7 @@ function theme_nodeaccess_grants_form($form) {
   $roles = element_children($form['rid']);
   if (count($roles) > 0) {
     $header = array(t('Role'), t('View'), t('Edit'), t('Delete'));
-    foreach($roles as $key) {
+    foreach ($roles as $key) {
       $row = array();
       $row[] = $form['rid'][$key]['name']['#value'] . drupal_render($form['rid'][$key]['name']);
       $row[] = drupal_render($form['rid'][$key]['grant_view']);
@@ -155,7 +155,7 @@ function theme_nodeaccess_grants_form($form) {
   $users = element_children($form['uid']);
   if (count($users) > 0) {
     $header = array(t('User'), t('Keep?'), t('View'), t('Edit'), t('Delete'));
-    foreach($users as $key) {
+    foreach ($users as $key) {
       $row = array();
       $row[] = $form['uid'][$key]['name']['#value'];
       $row[] = drupal_render($form['uid'][$key]['keep']);
@@ -300,10 +300,16 @@ function nodeaccess_admin_form() {
   $roles = user_roles();
   $useroles = variable_get('nodeaccess-roles', array());
 
-  $form['role'] =  array('#type' => 'fieldset', '#collapsible' => TRUE, '#collapsed' => TRUE, '#title' => t('Allowed Roles'), '#tree' => TRUE, );
+  $form['priority'] = array('#type' => 'checkbox',
+                            '#title' => t('Give node grants priority'),
+                            '#default_value' => variable_get('nodeaccess-priority', 0),
+                            '#description' => t('If you are only using this access control module, you can safely ignore this. If you are using multiple access control modules, and you want the grants given on individual nodes to override any grants given by other modules, you should check this box.'));
+
+  $form['role'] =  array('#type' => 'fieldset', '#collapsible' => TRUE, '#collapsed' => TRUE, '#title' => t('Allowed Roles'), '#tree' => TRUE);
   foreach ($roles as $id => $role) {
     $form['role'][$id] = array('#type' => 'checkbox', '#title' => $role, '#default_value' => $useroles[$id]);
   }
+
 
   foreach (node_get_types() as $type => $name) {
     $form['nodeaccess'][$type] = array('#type' => 'fieldset',
@@ -311,13 +317,11 @@ function nodeaccess_admin_form() {
                                        '#collapsed' => TRUE,
                                        '#title' => $name->name,
                                        '#tree' => TRUE,
-                                       '#theme' => 'nodeaccess_admin_fieldset',
-                                       );
+                                       '#theme' => 'nodeaccess_admin_fieldset');
 
     $form['nodeaccess'][$type]['show'] = array('#type' => 'checkbox',
                                                '#title' => t('Show grant tab for this node type'),
-                                               '#default_value' => $show[$type],
-                                               );
+                                               '#default_value' => $show[$type]);
 
     $perms = variable_get('nodeaccess_' . $type, array());
     foreach ($perms as $perm) {
@@ -326,9 +330,9 @@ function nodeaccess_admin_form() {
     // go through our roles
     foreach (user_roles() as $id => $role) {
       $form['nodeaccess'][$type]['roles'][$id]['name'] = array('#value' => $role);
-      $form['nodeaccess'][$type]['roles'][$id]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_view'], );
-      $form['nodeaccess'][$type]['roles'][$id]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_update'],);
-      $form['nodeaccess'][$type]['roles'][$id]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_delete'], );  	                                             
+      $form['nodeaccess'][$type]['roles'][$id]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_view']);
+      $form['nodeaccess'][$type]['roles'][$id]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_update']);
+      $form['nodeaccess'][$type]['roles'][$id]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $opts[$id]['grant_delete']);
     }
   }
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
@@ -352,13 +356,16 @@ function theme_nodeaccess_admin_fieldset($form) {
 }
 
 function nodeaccess_admin_form_submit($form_id, $form_values) {
-  foreach($form_values['role'] as $id => $val) {
+
+  variable_set('nodeaccess-priority', $form_values['priority']);
+
+  foreach ($form_values['role'] as $id => $val) {
     $pref[$id] = $val;
   }
 
   variable_set('nodeaccess-roles', $pref);
 
-  foreach(node_get_types() as $type => $name) {    
+  foreach (node_get_types() as $type => $name) {
     $grants = array();
     // update grants
     foreach ($form_values[$type]['roles'] as $role => $val) {
@@ -389,9 +396,16 @@ function nodeaccess_node_access_records($node) {
   $result = db_query("SELECT nid, gid, realm, grant_view, grant_update, grant_delete FROM {nodeaccess} where nid = %d", $node->nid);
   if (db_num_rows($result) < 1) {
     $grants = $default;
-  } else {
+  } 
+  else {
     // this node has a custom access set apart from the defaults, so return that
     $grants = array();
+    if (variable_get('nodeaccess-priority', 0)) {
+      $priority = 1;
+    } 
+    else {
+      $priority = 0;
+    }
     while ($row = db_fetch_object($result)) {
       $grants[] = array(
         'realm' => $row->realm,
@@ -399,8 +413,7 @@ function nodeaccess_node_access_records($node) {
         'grant_view' => $row->grant_view,
         'grant_update' => $row->grant_update,
         'grant_delete' => $row->grant_delete,
-        'priority' => 0
-      );
+        'priority' => $priority);
     }
     return $grants;
   }
