@@ -85,6 +85,11 @@ function nodeaccess_update_1() {
   }
 }
 
+function nodeaccess_update_2() {
+  // changed menu location, need to clear menu cache
+  clear_cache_all(NULL, 'cache_menu');
+}
+
 function nodeaccess_uninstall() {
   db_query("DELETE FROM {nodeaccess}");
   variable_del('nodeaccess-types');

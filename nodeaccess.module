@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.3 2007/03/01 14:57:24 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.7.2.4 2007/04/12 15:51:06 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -18,7 +18,7 @@ function nodeaccess_help($section) {
 function nodeaccess_menu($may_cache) {
   $items = array();
   if ($may_cache) {
-    $items[] = array('path' => 'admin/settings/nodeaccess', 'title' => t('Nodeaccess'),
+    $items[] = array('path' => 'admin/user/nodeaccess', 'title' => t('Nodeaccess'),
       'callback' => 'nodeaccess_admin', 'access' => user_access('administer nodeaccess'),
       'description' => t('Change default settings for the nodeaccess module'));
   }
@@ -177,24 +177,40 @@ function nodeaccess_grants_form_submit($form_id, $form_values) {
   $grants = array();
   $nid = $form_values['nid'];
   $save = array();
+  $node->nid = $nid; 
+
   foreach (array('uid', 'rid') as $type) {
+    $realm = 'nodeaccess_' . $type;
     if (is_array($form_values[$type])) {
       $grants = array();
-      $realm = 'nodeaccess_' . $type;
       foreach ($form_values[$type] as $gid => $line) {
-        $realm = 'nodeaccess_'. $type;
-        // check the settings, no need for an entry if no perms are granted
-        if ($line['grant_view'] || $line['grant_update'] || $line['grant_delete']) {
-          $grant = array('gid' => $gid, 'realm' => $realm, 'grant_view' => $line['grant_view'], 
-            'grant_update' => $line['grant_update'], 'grant_delete' => $line['grant_delete']);
-          $grants[] = $grant;
-          $save[] = $grant;
-        }
+        $grant = array('gid' => $gid, 'realm' => $realm, 'grant_view' => $line['grant_view'], 
+          'grant_update' => $line['grant_update'], 'grant_delete' => $line['grant_delete']);
+        $grants[] = $grant;
+        $save[] = $grant;
       }
-      $node->nid = $nid; 
-      node_access_write_grants($node, $grants, $realm);
     }
+    node_access_write_grants($node, $grants, $realm);
   }
+
+  // add author grants
+  // holy crap same piece of code used 3 times aaaah!
+  $author_prefs = variable_get('nodeaccess_authors', array());
+  $agrant = $author_prefs[$node->type];
+  if ($agrant['grant_view'] || $agrant['grant_update'] || $agrant['grant_delete']) {
+    $grants[] = array(
+      'realm' => 'nodeaccess_author',
+      'gid' => $node->uid,
+      'grant_view' => $agrant['grant_view'],
+      'grant_update' => $agrant['grant_update'],
+      'grant_delete' => $agrant['grant_delete'],
+      'priority' => 5 // give this a high priority since author perms should always win...
+    );
+    node_access_write_grants($node, $grants, 'nodeaccess_author');
+  }
+  
+
+      
   // save it to our own table, thanks to the new api....
   _nodeaccess_save_new($nid, $save);
 
@@ -222,7 +238,7 @@ function _nodeaccess_populate($nid) {
   if (!$edit) {
     $edit = array();
     // load all roles
-    $result = db_query("SELECT rid, name, na.* FROM {role} LEFT JOIN {node_access} na ON rid=gid AND realm='%s' AND nid=%d", 'nodeaccess_rid', $nid);
+    $result = db_query("SELECT rid, name, na.* FROM {role} LEFT JOIN {node_access} na ON rid=gid AND realm='%s' AND nid=%d ORDER BY name", 'nodeaccess_rid', $nid);
     while ($grant = db_fetch_object($result)) {
       $edit['rid'][$grant->rid] = array('name' => $grant->name, 'grant_view' => $grant->grant_view, 'grant_update' => $grant->grant_update, 'grant_delete' => $grant->grant_delete);
     }
@@ -272,7 +288,7 @@ function nodeaccess_node_grants($user, $op) {
   global $user;
 
   $roles = is_array($user->roles) ? array_keys($user->roles) : array(-1);
-  return array('nodeaccess_rid' => $roles, 'nodeaccess_uid' => array($user->uid));
+  return array('nodeaccess_rid' => $roles, 'nodeaccess_uid' => array($user->uid), 'nodeaccess_author' => array($user->uid));
 }
 
 function nodeaccess_nodeapi(&$node, $op) {
@@ -281,6 +297,22 @@ function nodeaccess_nodeapi(&$node, $op) {
   switch ($op) {
     case 'insert':
     $grants = $user->nodeaccess_defaults ? $user->nodeaccess_defaults : variable_get('nodeaccess_'. $node->type, array());
+
+    // add author grants
+    // this is duplicated below in nodeaccess_node_access_records, probably should fix that huh
+    $author_prefs = variable_get('nodeaccess_authors', array());
+    $agrant = $author_prefs[$node->type];
+    if ($agrant['grant_view'] || $agrant['grant_update'] || $agrant['grant_delete']) {
+      $grants[] = array(
+        'realm' => 'nodeaccess_author',
+        'gid' => $node->uid,
+        'grant_view' => $agrant['grant_view'],
+        'grant_update' => $agrant['grant_update'],
+        'grant_delete' => $agrant['grant_delete'],
+        'priority' => 5 // give this a high priority since author perms should always win...
+      );
+    }
+  
     node_access_write_grants($node, $grants, 'nodeaccess_rid');
     break;
   case 'delete':
@@ -305,7 +337,7 @@ function nodeaccess_admin_form() {
                             '#default_value' => variable_get('nodeaccess-priority', 0),
                             '#description' => t('If you are only using this access control module, you can safely ignore this. If you are using multiple access control modules, and you want the grants given on individual nodes to override any grants given by other modules, you should check this box.'));
 
-  $form['role'] =  array('#type' => 'fieldset', '#collapsible' => TRUE, '#collapsed' => TRUE, '#title' => t('Allowed Roles'), '#tree' => TRUE);
+  $form['role'] =  array('#type' => 'fieldset', '#collapsible' => TRUE, '#collapsed' => TRUE, '#title' => t('Allowed Roles'), '#tree' => TRUE, '#description' => t('The selected roles will be listed on individual node grants. If you wish for certain roles to be hidden from users on the node grants tab, make sure they are not selected here'));
   foreach ($roles as $id => $role) {
     $form['role'][$id] = array('#type' => 'checkbox', '#title' => $role, '#default_value' => $useroles[$id]);
   }
@@ -323,6 +355,12 @@ function nodeaccess_admin_form() {
                                                '#title' => t('Show grant tab for this node type'),
                                                '#default_value' => $show[$type]);
 
+    // preference for author settings
+    $author_prefs = variable_get('nodeaccess_authors', array());
+    $form['nodeaccess'][$type]['author']['grant_view'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+    $form['nodeaccess'][$type]['author']['grant_update'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_update']);
+    $form['nodeaccess'][$type]['author']['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_delete']);
+      
     $perms = variable_get('nodeaccess_' . $type, array());
     foreach ($perms as $perm) {
       $opts[$perm['gid']] = $perm;
@@ -352,6 +390,16 @@ function theme_nodeaccess_admin_fieldset($form) {
     $rows[] = $row;
   }
   $output .= theme('table', $header, $rows);
+
+  $header = array(t('Author Settings'), t('View'), t('Edit'), t('Delete'));
+  $row = array();
+  $row[] = t('Node author');
+  $row[] = drupal_render($form['author']['grant_view']);
+  $row[] = drupal_render($form['author']['grant_update']);
+  $row[] = drupal_render($form['author']['grant_delete']);
+
+  $output .= theme('table', $header, array($row));
+  $output .= '<small>' . t('The settings selected for the node author will define what permissions the node author has. This cannot be changed on individual node grants') . '</small>';
   return $output;
 }
 
@@ -365,6 +413,8 @@ function nodeaccess_admin_form_submit($form_id, $form_values) {
 
   variable_set('nodeaccess-roles', $pref);
 
+  $author_prefs = array();
+  
   foreach (node_get_types() as $type => $name) {
     $grants = array();
     // update grants
@@ -378,7 +428,13 @@ function nodeaccess_admin_form_submit($form_id, $form_values) {
     else {
       $showing[$type] = 0;
     }
+
+    $author_prefs[$type] = $form_values[$type]['author'];
   }
+
+  // set author prefs
+
+  variable_set('nodeaccess_authors', $author_prefs);
 
   variable_set('nodeaccess-types', $showing);
   node_access_rebuild();
@@ -415,7 +471,20 @@ function nodeaccess_node_access_records($node) {
         'grant_delete' => $row->grant_delete,
         'priority' => $priority);
     }
-    return $grants;
+  }
+
+  // add author grants
+  $author_prefs = variable_get('nodeaccess_authors', array());
+  $agrant = $author_prefs[$node->type];
+  if ($agrant['grant_view'] || $agrant['grant_update'] || $agrant['grant_delete']) {
+    $grants[] = array(
+      'realm' => 'nodeaccess_author',
+      'gid' => $node->uid,
+      'grant_view' => $agrant['grant_view'],
+      'grant_update' => $agrant['grant_update'],
+      'grant_delete' => $agrant['grant_delete'],
+      'priority' => 5 // give this a high priority since author perms should always win...
+    );
   }
   return $grants;
 }
