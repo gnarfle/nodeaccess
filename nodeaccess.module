@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.5 2007/04/27 18:30:18 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.7.2.6 2007/04/27 18:47:54 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -204,7 +204,7 @@ function nodeaccess_grants_form_submit($form_id, $form_values) {
       'grant_view' => $agrant['grant_view'],
       'grant_update' => $agrant['grant_update'],
       'grant_delete' => $agrant['grant_delete'],
-      'priority' => 5 // give this a high priority since author perms should always win...
+      'priority' => $priority
     );
     node_access_write_grants($node, $grants, 'nodeaccess_author');
   }
