@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.4 2007/04/12 15:51:06 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.7.2.5 2007/04/27 18:30:18 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -506,4 +506,30 @@ function nodeaccess_disabling($set = NULL) {
   return $disabling;
 } 
 
+function nodeaccess_node_type($op, $info) {
+  switch($op) {
+    case 'delete':
+      // node type is being deleted, get rid of prefs
+      variable_del('nodeaccess_' . $info->type);
+      break;
+    case 'update':
+      // node type has changed
+      if (!empty($info->old_type) && $info->old_type != $info->type) {
+        $setting = variable_get('nodeaccess_'. $info->old_type, array());
+        variable_del('nodeaccess_'. $info->old_type);
+        variable_set('nodeaccess_'. $info->type, $setting);
+      }
+      break;
+    case 'insert':
+      // new node type, default to all viewing
+      $grants[] = array('gid' => 1, 'realm' => 'nodeaccess_rid', 'grant_view' => 1, 
+                  'grant_update' => 0, 'grant_delete' => 0);
+      $grants[] = array('gid' => 2, 'realm' => 'nodeaccess_rid', 'grant_view' => 1,                                        'grant_update' => 0, 'grant_delete' => 0);
+      $author_prefs = variable_get('nodeaccess_authors', array());
+      $author_prefs[$info->type] = array('grant_view' => 1, 'grant_update' => 1, 'grant_delete' => 1);
+      variable_set('nodeaccess_' . $info->type, $grants); 
+      node_access_rebuild();
+      break;
+  }
+}
 ?>

@@ -26,6 +26,18 @@ function nodeaccess_install() {
       )");
     break;
   }
+  // set up default permissions to be view for authenticated and anonymouse users
+  $grants = array();
+  $grants[] = array('gid' => 1, 'realm' => 'nodeaccess_rid', 'grant_view' => 1,
+              'grant_update' => 0, 'grant_delete' => 0);
+  $grants[] = array('gid' => 2, 'realm' => 'nodeaccess_rid', 'grant_view' => 1,
+              'grant_update' => 0, 'grant_delete' => 0);
+  $author = array();
+  foreach (node_get_types() as $type => $name) {
+    variable_set('nodeaccess_' . $type, $grants);
+    $author[$type] = array('grant_view' => 1, 'grant_update' => 1, 'grant_delete' => 1);
+  }
+  variable_set('nodeaccess_authors', $author);
 }
 
 function nodeaccess_update_1() {
@@ -87,13 +99,15 @@ function nodeaccess_update_1() {
 
 function nodeaccess_update_2() {
   // changed menu location, need to clear menu cache
-  clear_cache_all(NULL, 'cache_menu');
+  cache_clear_all(NULL, 'cache_menu');
 }
 
 function nodeaccess_uninstall() {
   db_query("DELETE FROM {nodeaccess}");
   variable_del('nodeaccess-types');
   variable_del('nodeaccess-roles');
+  variable_del('nodeaccess-priority');
+  variable_del('nodeaccess_authors');
   foreach (node_get_types() as $type => $name) {
     variable_del('nodeaccess_' . $type);
   }
