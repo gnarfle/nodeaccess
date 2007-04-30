@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.6 2007/04/27 18:47:54 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.7.2.7 2007/04/30 19:35:18 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -197,6 +197,12 @@ function nodeaccess_grants_form_submit($form_id, $form_values) {
   // holy crap same piece of code used 3 times aaaah!
   $author_prefs = variable_get('nodeaccess_authors', array());
   $agrant = $author_prefs[$node->type];
+  if (variable_get('nodeaccess-priority', 0)) {
+    $priority = 1;
+  }
+  else {
+    $priority = 0;
+  }
   if ($agrant['grant_view'] || $agrant['grant_update'] || $agrant['grant_delete']) {
     $grants[] = array(
       'realm' => 'nodeaccess_author',
@@ -303,13 +309,19 @@ function nodeaccess_nodeapi(&$node, $op) {
     $author_prefs = variable_get('nodeaccess_authors', array());
     $agrant = $author_prefs[$node->type];
     if ($agrant['grant_view'] || $agrant['grant_update'] || $agrant['grant_delete']) {
+      if (variable_get('nodeaccess-priority', 0)) {
+        $priority = 1;
+      }
+      else {
+        $priority = 0;
+      }
       $grants[] = array(
         'realm' => 'nodeaccess_author',
         'gid' => $node->uid,
         'grant_view' => $agrant['grant_view'],
         'grant_update' => $agrant['grant_update'],
         'grant_delete' => $agrant['grant_delete'],
-        'priority' => 5 // give this a high priority since author perms should always win...
+        'priority' => $priority
       );
     }
   
@@ -448,7 +460,13 @@ function nodeaccess_node_access_records($node) {
 
   // need to figure out if we're going for the defaults, or if this node has a preference
   $default = variable_get('nodeaccess_' . $node->type, array());
-  
+ 
+  if (variable_get('nodeaccess-priority', 0)) {
+    $priority = 1;
+  }
+  else {
+    $priority = 0;
+  } 
   $result = db_query("SELECT nid, gid, realm, grant_view, grant_update, grant_delete FROM {nodeaccess} where nid = %d", $node->nid);
   if (db_num_rows($result) < 1) {
     $grants = $default;
@@ -456,12 +474,6 @@ function nodeaccess_node_access_records($node) {
   else {
     // this node has a custom access set apart from the defaults, so return that
     $grants = array();
-    if (variable_get('nodeaccess-priority', 0)) {
-      $priority = 1;
-    } 
-    else {
-      $priority = 0;
-    }
     while ($row = db_fetch_object($result)) {
       $grants[] = array(
         'realm' => $row->realm,
@@ -483,7 +495,7 @@ function nodeaccess_node_access_records($node) {
       'grant_view' => $agrant['grant_view'],
       'grant_update' => $agrant['grant_update'],
       'grant_delete' => $agrant['grant_delete'],
-      'priority' => 5 // give this a high priority since author perms should always win...
+      'priority' => $priority 
     );
   }
   return $grants;
