@@ -1,5 +1,5 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.7 2007/04/30 19:35:18 debtman7 Exp $
+// $Id: nodeaccess.module,v 1.4.2.7.2.8 2007/06/08 16:24:51 debtman7 Exp $
 
 /**
  * Implementation of hook_help().
@@ -298,35 +298,7 @@ function nodeaccess_node_grants($user, $op) {
 }
 
 function nodeaccess_nodeapi(&$node, $op) {
-  global $user;
-
   switch ($op) {
-    case 'insert':
-    $grants = $user->nodeaccess_defaults ? $user->nodeaccess_defaults : variable_get('nodeaccess_'. $node->type, array());
-
-    // add author grants
-    // this is duplicated below in nodeaccess_node_access_records, probably should fix that huh
-    $author_prefs = variable_get('nodeaccess_authors', array());
-    $agrant = $author_prefs[$node->type];
-    if ($agrant['grant_view'] || $agrant['grant_update'] || $agrant['grant_delete']) {
-      if (variable_get('nodeaccess-priority', 0)) {
-        $priority = 1;
-      }
-      else {
-        $priority = 0;
-      }
-      $grants[] = array(
-        'realm' => 'nodeaccess_author',
-        'gid' => $node->uid,
-        'grant_view' => $agrant['grant_view'],
-        'grant_update' => $agrant['grant_update'],
-        'grant_delete' => $agrant['grant_delete'],
-        'priority' => $priority
-      );
-    }
-  
-    node_access_write_grants($node, $grants, 'nodeaccess_rid');
-    break;
   case 'delete':
     db_query('DELETE FROM {nodeaccess} WHERE nid=%d', $node->nid);
     break;
@@ -470,6 +442,9 @@ function nodeaccess_node_access_records($node) {
   $result = db_query("SELECT nid, gid, realm, grant_view, grant_update, grant_delete FROM {nodeaccess} where nid = %d", $node->nid);
   if (db_num_rows($result) < 1) {
     $grants = $default;
+    foreach ($grants as $id => $grant) {
+      $grants[$id]['priority'] = $priority;
+    }
   } 
   else {
     // this node has a custom access set apart from the defaults, so return that
@@ -544,4 +519,5 @@ function nodeaccess_node_type($op, $info) {
       break;
   }
 }
+
 ?>
