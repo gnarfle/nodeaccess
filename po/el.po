@@ -1,0 +1,141 @@
+# translation of el.po to Greek
+# $Id: el.po,v 1.1.2.1 2008/01/03 20:45:35 goofyx Exp $
+#
+# LANGUAGE translation of Drupal (nodeaccess.module)
+# Copyright YEAR NAME <EMAIL@ADDRESS>
+# Generated from files:
+#  nodeaccess.module,v 1.4.2.7.2.1 2007/02/16 20:39:23 debtman7
+#  nodeaccess.info,v 1.1.2.1 2007/02/16 20:39:23 debtman7
+#
+# Vasileios Lourdas <lourdas_v@yahoo.gr>, 2008.
+msgid ""
+msgstr ""
+"Project-Id-Version: el\n"
+"POT-Creation-Date: 2008-01-03 22:23+0200\n"
+"PO-Revision-Date: 2008-01-03 22:43+0200\n"
+"Last-Translator: Vasileios Lourdas <lourdas_v@yahoo.gr>\n"
+"Language-Team: Greek <el@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms:  nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Greek\n"
+"X-Poedit-Country: GREECE\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#: nodeaccess.module:9
+msgid "You can set grants per users."
+msgstr "Μπορείτε να ορίσετε κανόνες πρόσβασης για τους χρήστες."
+
+#: nodeaccess.module:10
+msgid " You need to check the Keep checkbox if you want to keep the user for granting. Users with Keep checkbox checked remain in the user table between searches. Note that user rights are additional to those coming from roles."
+msgstr " Πρέπει να επιλέξετε το πλαίσιο Διατήρηση αν επιθυμείτε να κρατήσετε το χρήστη για τους κανόνες πρόσβασης. Οι χρήστες με το πλαίσιο Διατήρηση επιλεγμένο παραμένουν στον πίνακα χρηστών μεταξύ των αναζητήσεων. Πρέπει να σημειωθεί ότι τα δικαιώματα χρηστών είναι πρόσθετα σε αυτά που προέρχονται από τους ρόλους."
+
+#: nodeaccess.module:21 nodeaccess.info:0
+msgid "Nodeaccess"
+msgstr "Nodeaccess (κανόνες πρόσβασης)"
+
+#: nodeaccess.module:23
+msgid "Change default settings for the nodeaccess module"
+msgstr "Αλλάξτε τις προεπιλεγμένες ρυθμίσεις για τη μονάδα nodeaccess"
+
+#: nodeaccess.module:31
+msgid "Grant"
+msgstr "Κανόνες πρόσβασης"
+
+#: nodeaccess.module:121
+msgid "Search"
+msgstr "Αναζήτηση"
+
+#: nodeaccess.module:123;360
+msgid "Save Grants"
+msgstr "Αποθήκευση Κανόνων Πρόσβασης"
+
+#: nodeaccess.module:132;367
+msgid "Role"
+msgstr "Ρόλος"
+
+#: nodeaccess.module:132;157;367;378
+msgid "View"
+msgstr "Άποψη"
+
+#: nodeaccess.module:132;157;367;378
+msgid "Edit"
+msgstr "Επεξεργασία"
+
+#: nodeaccess.module:132;157;367;378
+msgid "Delete"
+msgstr "Διαγραφή"
+
+#: nodeaccess.module:146
+msgid "Enter names to search for users:"
+msgstr "Πληκτρολογήστε ονόματα για αναζήτηση χρηστών:"
+
+#: nodeaccess.module:157
+msgid "User"
+msgstr "Χρήστης"
+
+#: nodeaccess.module:157
+msgid "Keep?"
+msgstr "Διατήρηση;"
+
+#: nodeaccess.module:223
+msgid "Grants saved."
+msgstr "Οι κανόνες πρόσβασης αποθηκεύτηκαν."
+
+#: nodeaccess.module:320
+msgid "Give node grants priority"
+msgstr "Εισάγετε προτεραιότητα στους κανόνες πρόσβασης"
+
+#: nodeaccess.module:322
+msgid "If you are only using this access control module, you can safely ignore this. If you are using multiple access control modules, and you want the grants given on individual nodes to override any grants given by other modules, you should check this box."
+msgstr "Αν χρησιμοποιείτε μόνο αυτή τη μονάδα ελέγχου πρόσβασης, μπορείτε να αγνοήσετε το παρακάτω με ασφάλεια. Αν χρησιμοποιείτε πολλές μονάδες ελέγχου πρόσβασης και επιθυμείτε οι κανόνες πρόσβασης που δίνονται σε συγκεκριμένους κόμβους να έχουν προτεραιότητα από τους κανόνες πρόσβασης άλλων μονάδων, θα πρέπει να επιλέξετε το πλαίσιο αυτό."
+
+#: nodeaccess.module:324
+msgid "Allowed Roles"
+msgstr "Επιτρεπόμενοι Ρόλοι"
+
+#: nodeaccess.module:324
+msgid "The selected roles will be listed on individual node grants. If you wish for certain roles to be hidden from users on the node grants tab, make sure they are not selected here"
+msgstr "Οι επιλεγμένοι ρόλοι θα εμφανίζονται στη λίστα των κανόνων πρόσβασης συγκεκριμένων κόμβων. Αν επιθυμείτε ορισμένοι ρόλοι να είναι κρυφοί από την καρτέλα των χρηστών στους κανόνες πρόσβασης του κόμβου, πρέπει να μην είναι επιλεγμένοι εδώ."
+
+#: nodeaccess.module:339
+msgid "Show grant tab for this node type"
+msgstr "Εμφάνιση καρτέλας κανόνων πρόσβασης για αυτόν τον τύπο ύλης"
+
+#: nodeaccess.module:378
+msgid "Author Settings"
+msgstr "Ρυθμίσεις συγγραφέα"
+
+#: nodeaccess.module:380
+msgid "Node author"
+msgstr "Συγγραφέας κόμβου"
+
+#: nodeaccess.module:386
+msgid "The settings selected for the node author will define what permissions the node author has. This cannot be changed on individual node grants"
+msgstr "Οι επιλεγμένες για το συγγραφέα ρυθμίσεις καθορίζουν τα δικαιώματα που έχει ο συγγραφέας του κόμβου. Αυτό δεν μπορεί να αλλάξει στους κανόνες πρόσβασης χωριστών κόμβων."
+
+#: nodeaccess.module:425
+msgid "Grants Saved"
+msgstr "Οι κανόνες πρόσβασης αποθηκεύτηκαν"
+
+#: nodeaccess.module:46
+msgid "administer nodeaccess"
+msgstr "διαχείριση μονάδας nodeaccess"
+
+#: nodeaccess.module:46
+msgid "grant node permissions"
+msgstr "διατύπωση κανόνων πρόσβασης"
+
+#: nodeaccess.module:46
+msgid "grant own node permissions"
+msgstr "διατύπωση δικών τους κανόνων πρόσβασης"
+
+#: nodeaccess.module:0
+msgid "nodeaccess"
+msgstr "nodeaccess (κανόνες πρόσβασης)"
+
+#: nodeaccess.info:0
+msgid "Provides per node access control"
+msgstr "Δίνει δυνατότητα ελέγχου πρόσβασης με βάση τον τύπο ύλης"
+
