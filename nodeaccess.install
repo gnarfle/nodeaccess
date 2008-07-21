@@ -1,19 +1,29 @@
 <?php
 
+/**
+ * Implementation of hook_install().
+ */
 function nodeaccess_install() {
+  // Create tables.
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
       db_query("CREATE TABLE {nodeaccess} (
-          nid int(10) unsigned NOT NULL default '0',
-          gid int(10) unsigned NOT NULL default '0',
-          realm varchar(255) NOT NULL default '',
-          grant_view tinyint(1) unsigned NOT NULL default '0',
-          grant_update tinyint(1) unsigned NOT NULL default '0',
-          grant_delete tinyint(1) unsigned NOT NULL default '0',
-          PRIMARY KEY  (nid,gid,realm)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
+        nid int(10) unsigned NOT NULL default '0',
+        gid int(10) unsigned NOT NULL default '0',
+        realm varchar(255) NOT NULL default '',
+        grant_view tinyint(1) unsigned NOT NULL default '0',
+        grant_update tinyint(1) unsigned NOT NULL default '0',
+        grant_delete tinyint(1) unsigned NOT NULL default '0',
+        PRIMARY KEY (nid,gid,realm)
+      )"); /*!40100 DEFAULT CHARACTER SET utf8 */
+      db_query("CREATE TABLE {nodeaccess_role_alias} (
+        rid int(10) unsigned NOT NULL default '0',
+        name varchar(50) NOT NULL default '',
+        weight int(3) NOT NULL default '0',
+        PRIMARY KEY (rid)
+      )");
+    break;
     case 'pgsql':
       db_query("CREATE TABLE {nodeaccess} (
         nid int_unsigned NOT NULL default '0',
@@ -24,36 +34,50 @@ function nodeaccess_install() {
         grant_delete smallint_unsigned NOT NULL default '0',
         PRIMARY KEY (nid,gid,realm)
       )");
+      db_query("CREATE TABLE {nodeaccess_role_alias} (
+        rid int_unsigned NOT NULL default '0',
+        name varchar(50) NOT NULL default '',
+        weight smallint NOT NULL default '0',
+        PRIMARY KEY (rid)
+      )");
     break;
   }
-  // set up default permissions to be view for authenticated and anonymouse users
+  // Set up default permissions to be view for authenticated and
+  // anonymous users, and all permissions for author.
   $grants = array();
-  $grants[] = array('gid' => 1, 'realm' => 'nodeaccess_rid', 'grant_view' => 1,
-              'grant_update' => 0, 'grant_delete' => 0);
-  $grants[] = array('gid' => 2, 'realm' => 'nodeaccess_rid', 'grant_view' => 1,
-              'grant_update' => 0, 'grant_delete' => 0);
-  $author = array();
+  $grants[] = array('gid' => 1, 'realm' => 'nodeaccess_rid',
+                    'grant_view' => 1, 'grant_update' => 0, 'grant_delete' => 0);
+  $grants[] = array('gid' => 2, 'realm' => 'nodeaccess_rid',
+                    'grant_view' => 1, 'grant_update' => 0, 'grant_delete' => 0);
+  $author_prefs = array();
   foreach (node_get_types() as $type => $name) {
     variable_set('nodeaccess_' . $type, $grants);
-    $author[$type] = array('grant_view' => 1, 'grant_update' => 1, 'grant_delete' => 1);
+    $author_prefs[$type] = array('grant_view' => 1, 'grant_update' => 1, 'grant_delete' => 1);
   }
-  variable_set('nodeaccess_authors', $author);
+  variable_set('nodeaccess_authors', $author_prefs);
+  // Set up all permissions to be editable by default.
+  $grant_prefs = array('view' => 1, 'edit' => 1, 'delete' => 1);
+  variable_set('nodeaccess-grants', $grant_prefs);
 }
 
+/**
+ * Implementations of hook_update_N().
+ */
 function nodeaccess_update_1() {
+  // Create new nodeaccess table.
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
       db_query("CREATE TABLE {nodeaccess} (
-          nid int(10) unsigned NOT NULL default '0',
-          gid int(10) unsigned NOT NULL default '0',
-          realm varchar(255) NOT NULL default '',
-          grant_view tinyint(1) unsigned NOT NULL default '0',
-          grant_update tinyint(1) unsigned NOT NULL default '0',
-          grant_delete tinyint(1) unsigned NOT NULL default '0',
-          PRIMARY KEY  (nid,gid,realm)
-        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
+        nid int(10) unsigned NOT NULL default '0',
+        gid int(10) unsigned NOT NULL default '0',
+        realm varchar(255) NOT NULL default '',
+        grant_view tinyint(1) unsigned NOT NULL default '0',
+        grant_update tinyint(1) unsigned NOT NULL default '0',
+        grant_delete tinyint(1) unsigned NOT NULL default '0',
+        PRIMARY KEY (nid,gid,realm)
+      )"); /*!40100 DEFAULT CHARACTER SET utf8 */
+    break;
     case 'pgsql':
       db_query("CREATE TABLE {nodeaccess} (
         nid int_unsigned NOT NULL default '0',
@@ -67,51 +91,91 @@ function nodeaccess_update_1() {
     break;
   }
 
-  // migrate variables if we're updating
+  // Update format of content type specific variables.
   foreach (node_get_types() as $type => $name) {
     $perm = variable_get('nodeaccess_' . $type, array());
     if (count($perm) > 0) {
       foreach ($perm['rid'] as $role => $grants) {
-        $new[] = array('realm' => 'nodeaccess_rid',
-                       'gid' => $grants[0],
+        $new[] = array('gid' => $grants[0],
+                       'realm' => 'nodeaccess_rid',
                        'grant_view' => $grants['grant_view'],
                        'grant_update' => $grants['grant_update'],
                        'grant_delete' => $grants['grant_delete']
                        );
-        // save variable, once this works...
       }
       variable_set('nodeaccess_' . $type, $new);
     }
   }
 
-  // populate our nodeaccess table with data from node_access
-  $result = db_query("SELECT na.nid, na.gid, na.realm, na.grant_view, na.grant_update, na.grant_delete, n.type FROM {node_access} na LEFT JOIN {node} n on n.nid=na.nid WHERE na.realm = 'nodeaccess_uid' OR na.realm = 'nodeaccess_rid'");
+  // Populate the new nodeaccess table with data from node_access.
+  $result = db_query("SELECT na.nid, na.gid, na.realm, na.grant_view, na.grant_update, na.grant_delete, n.type FROM {node_access} na LEFT JOIN {node} n ON n.nid = na.nid WHERE na.realm = 'nodeaccess_uid' OR na.realm = 'nodeaccess_rid'");
   while ($row = db_fetch_object($result)) {
     $default = variable_get('nodeaccess_' . $row->type, array());
     if ($default['grant_view'] != $row->grant_view &&
         $default['grant_update'] != $row->grant_update &&
         $default['grant_delete'] != $row->grant_delete) {
-      db_query("INSERT into {nodeaccess} (nid, gid, realm, grant_view, grant_update, grant_delete) values (%d, %d, '%s', %d, %d, %d)",
+      db_query("INSERT INTO {nodeaccess} (nid, gid, realm, grant_view, grant_update, grant_delete) VALUES (%d, %d, '%s', %d, %d, %d)",
         $row->nid, $row->gid, $row->realm, $row->grant_view, $row->grant_update, $row->grant_delete);
     }
   }
 }
 
 function nodeaccess_update_2() {
-  // changed menu location, need to clear menu cache
+  // Clear menu cache because of changed menu location.
   cache_clear_all(NULL, 'cache_menu');
 }
 
+function nodeaccess_update_3() {
+  // Create new nodeaccess_role_alias table.
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      db_query("CREATE TABLE {nodeaccess_role_alias} (
+        rid int(10) unsigned NOT NULL default '0',
+        name varchar(50) NOT NULL default '',
+        weight int(3) NOT NULL default '0',
+        PRIMARY KEY (rid)
+      )");
+    break;
+    case 'pgsql':
+      db_query("CREATE TABLE {nodeaccess_role_alias} (
+        rid int_unsigned NOT NULL default '0',
+        name varchar(50) NOT NULL default '',
+        weight smallint NOT NULL default '0',
+        PRIMARY KEY (rid)
+      )");
+    break;
+  }
+  // Set up default alias names to match role names and default
+  // weights to 0. Do this for allowed roles only.
+  $allowedrole = variable_get('nodeaccess-roles', array());
+  foreach ($allowedrole as $rid => $value) {
+    if ($value) {
+      db_query("INSERT INTO {nodeaccess_role_alias} SELECT rid, name, 0 FROM {role} WHERE rid = %d", $rid);
+    }
+  }
+  // Set up all permissions to be editable by default.
+  $grant_prefs = array('view' => 1, 'edit' => 1, 'delete' => 1);
+  variable_set('nodeaccess-grants', $grant_prefs);
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
 function nodeaccess_uninstall() {
-  db_query("DELETE FROM {nodeaccess}");
-  variable_del('nodeaccess-types');
-  variable_del('nodeaccess-roles');
+  // Remove variables.
   variable_del('nodeaccess-priority');
+  variable_del('nodeaccess-preserve');
+  variable_del('nodeaccess-grants');
+  variable_del('nodeaccess-roles');
+  variable_del('nodeaccess-types');
   variable_del('nodeaccess_authors');
   foreach (node_get_types() as $type => $name) {
     variable_del('nodeaccess_' . $type);
   }
-  db_query('DROP TABLE {nodeaccess}'); 
+  // Remove tables.
+  db_query("DROP TABLE {nodeaccess}"); 
+  db_query("DROP TABLE {nodeaccess_role_alias}");
 }
 
 ?>
