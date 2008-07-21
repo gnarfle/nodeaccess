@@ -5,43 +5,7 @@
  */
 function nodeaccess_install() {
   // Create tables.
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {nodeaccess} (
-        nid int(10) unsigned NOT NULL default '0',
-        gid int(10) unsigned NOT NULL default '0',
-        realm varchar(255) NOT NULL default '',
-        grant_view tinyint(1) unsigned NOT NULL default '0',
-        grant_update tinyint(1) unsigned NOT NULL default '0',
-        grant_delete tinyint(1) unsigned NOT NULL default '0',
-        PRIMARY KEY (nid,gid,realm)
-      )"); /*!40100 DEFAULT CHARACTER SET utf8 */
-      db_query("CREATE TABLE {nodeaccess_role_alias} (
-        rid int(10) unsigned NOT NULL default '0',
-        name varchar(50) NOT NULL default '',
-        weight int(3) NOT NULL default '0',
-        PRIMARY KEY (rid)
-      )");
-    break;
-    case 'pgsql':
-      db_query("CREATE TABLE {nodeaccess} (
-        nid int_unsigned NOT NULL default '0',
-        gid int_unsigned NOT NULL default '0',
-        realm varchar(255) NOT NULL default '',
-        grant_view smallint_unsigned NOT NULL default '0',
-        grant_update smallint_unsigned NOT NULL default '0',
-        grant_delete smallint_unsigned NOT NULL default '0',
-        PRIMARY KEY (nid,gid,realm)
-      )");
-      db_query("CREATE TABLE {nodeaccess_role_alias} (
-        rid int_unsigned NOT NULL default '0',
-        name varchar(50) NOT NULL default '',
-        weight smallint NOT NULL default '0',
-        PRIMARY KEY (rid)
-      )");
-    break;
-  }
+  drupal_install_schema('nodeaccess');
   // Set up default permissions to be view for authenticated and
   // anonymous users, and all permissions for author.
   $grants = array();
@@ -61,35 +25,49 @@ function nodeaccess_install() {
 }
 
 /**
+ * Implementation of hook_schema().
+ */
+function nodeaccess_schema() {
+  $schema['nodeaccess'] = array(
+    'fields' => array(
+      'nid'          => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'gid'          => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'realm'        => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'grant_view'   => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'grant_update' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'grant_delete' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0)
+    ),
+    'primary key' => array('nid', 'gid', 'realm')
+  );
+  $schema['nodeaccess_role_alias'] = array(
+    'fields' => array(
+      'rid'          => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'name'         => array('type' => 'varchar', 'length' => 50, 'not null' => TRUE, 'default' => ''),
+      'weight'       => array('type' => 'int', 'not null' => TRUE, 'default' => 0)
+    ),
+    'primary key' => array('rid')
+  );
+  return $schema;
+}
+
+/**
  * Implementations of hook_update_N().
  */
 function nodeaccess_update_1() {
   // Create new nodeaccess table.
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {nodeaccess} (
-        nid int(10) unsigned NOT NULL default '0',
-        gid int(10) unsigned NOT NULL default '0',
-        realm varchar(255) NOT NULL default '',
-        grant_view tinyint(1) unsigned NOT NULL default '0',
-        grant_update tinyint(1) unsigned NOT NULL default '0',
-        grant_delete tinyint(1) unsigned NOT NULL default '0',
-        PRIMARY KEY (nid,gid,realm)
-      )"); /*!40100 DEFAULT CHARACTER SET utf8 */
-    break;
-    case 'pgsql':
-      db_query("CREATE TABLE {nodeaccess} (
-        nid int_unsigned NOT NULL default '0',
-        gid int_unsigned NOT NULL default '0',
-        realm varchar(255) NOT NULL default '',
-        grant_view smallint_unsigned NOT NULL default '0',
-        grant_update smallint_unsigned NOT NULL default '0',
-        grant_delete smallint_unsigned NOT NULL default '0',
-        PRIMARY KEY (nid,gid,realm)
-      )");
-    break;
-  }
+  $schema['nodeaccess'] = array(
+    'fields' => array(
+      'nid'          => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'gid'          => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'realm'        => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''),
+      'grant_view'   => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'grant_update' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'grant_delete' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0)
+    ),
+    'primary key' => array('nid', 'gid', 'realm')
+  );
+  $ret = array();
+  db_create_table($ret, 'nodeaccess', $schema['nodeaccess']);
 
   // Update format of content type specific variables.
   foreach (node_get_types() as $type => $name) {
@@ -118,6 +96,7 @@ function nodeaccess_update_1() {
         $row->nid, $row->gid, $row->realm, $row->grant_view, $row->grant_update, $row->grant_delete);
     }
   }
+  return $ret;
 }
 
 function nodeaccess_update_2() {
@@ -127,25 +106,16 @@ function nodeaccess_update_2() {
 
 function nodeaccess_update_3() {
   // Create new nodeaccess_role_alias table.
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {nodeaccess_role_alias} (
-        rid int(10) unsigned NOT NULL default '0',
-        name varchar(50) NOT NULL default '',
-        weight int(3) NOT NULL default '0',
-        PRIMARY KEY (rid)
-      )");
-    break;
-    case 'pgsql':
-      db_query("CREATE TABLE {nodeaccess_role_alias} (
-        rid int_unsigned NOT NULL default '0',
-        name varchar(50) NOT NULL default '',
-        weight smallint NOT NULL default '0',
-        PRIMARY KEY (rid)
-      )");
-    break;
-  }
+  $schema['nodeaccess_role_alias'] = array(
+    'fields' => array(
+      'rid'          => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'name'         => array('type' => 'varchar', 'length' => 50, 'not null' => TRUE, 'default' => ''),
+      'weight'       => array('type' => 'int', 'not null' => TRUE, 'default' => 0)
+    ),
+    'primary key' => array('rid')
+  );
+  $ret = array();
+  db_create_table($ret, 'nodeaccess_role_alias', $schema['nodeaccess_role_alias']);
   // Set up default alias names to match role names and default
   // weights to 0. Do this for allowed roles only.
   $allowedrole = variable_get('nodeaccess-roles', array());
@@ -157,6 +127,7 @@ function nodeaccess_update_3() {
   // Set up all permissions to be editable by default.
   $grant_prefs = array('view' => 1, 'edit' => 1, 'delete' => 1);
   variable_set('nodeaccess-grants', $grant_prefs);
+  return $ret;
 }
 
 /**
@@ -174,8 +145,7 @@ function nodeaccess_uninstall() {
     variable_del('nodeaccess_' . $type);
   }
   // Remove tables.
-  db_query("DROP TABLE {nodeaccess}"); 
-  db_query("DROP TABLE {nodeaccess_role_alias}");
+  drupal_uninstall_schema('nodeaccess');
 }
 
 ?>

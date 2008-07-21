@@ -1,41 +1,35 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.9 2008/07/21 21:43:46 mantyla Exp $
+// $Id: nodeaccess.module,v 1.4.2.7.2.10 2008/07/21 21:51:50 mantyla Exp $
 
 /**
  * Implementation of hook_help().
  */
-function nodeaccess_help($section) {
-  if (preg_match('|^node/\d+/grant|', $section)) {
-    return '<small>' . t('You can set grants per users. Enter a name or a partial name in the box and click Search or press return. You need to check the Keep? checkbox if you want to keep the user for granting. Note that user grants are additional to those coming from roles.') . '</small>';
+function nodeaccess_help($path, $arg) {
+  switch ($path) {
+    case 'node/%/grant':
+      return '<small>' . t('You can set grants per users. Enter a name or a partial name in the box and click Search or press return. You need to check the Keep? checkbox if you want to keep the user for granting. Note that user grants are additional to those coming from roles.') . '</small>';
   }
 }
 
 /**
  * Implementation of hook_menu().
  */
-function nodeaccess_menu($may_cache) {
-  $items = array();
-  if ($may_cache) {
-    $items[] = array('path' => 'admin/user/nodeaccess',
-                     'title' => t('Nodeaccess'),
-                     'callback' => 'nodeaccess_admin',
-                     'access' => user_access('administer nodeaccess'),
-                     'description' => t('Change default settings for the Nodeaccess module.'));
-  }
-  else {
-    if (arg(0) == 'node' && is_numeric(arg(1))) {
-      $node = node_load(arg(1));
-      if (nodeaccess_access('grant', $node)) {
-        $items[] = array('path' => 'node/'. $node->nid .'/grant',
-                         'title' => t('Grant'),
-                         'callback' => 'nodeaccess_grants',
-                         'callback arguments' => $node->nid,
-                         'access' => nodeaccess_access('grant', $node),
-                         'weight' => 5,
-                         'type' => MENU_LOCAL_TASK);
-      }
-    }
-  }
+function nodeaccess_menu() {
+  $items['admin/user/nodeaccess'] = array(
+    'title' => 'Nodeaccess',
+    'description' => 'Change default settings for the Nodeaccess module.',
+    'page callback' => 'nodeaccess_admin',
+    'access arguments' => array('administer nodeaccess')
+  );
+  $items['node/%node/grant'] = array(
+    'title' => 'Grant',
+    'page callback' => 'nodeaccess_grants',
+    'page arguments' => array(1),
+    'access callback' => 'nodeaccess_access',
+    'access arguments' => array('grant', 1),
+    'weight' => 5,
+    'type' => MENU_LOCAL_TASK
+  );
   return $items;
 }
 
@@ -49,19 +43,38 @@ function nodeaccess_perm() {
 /**
  * Implementation of hook_access().
  */
-function nodeaccess_access($op, $node) {
+function nodeaccess_access($op, $node, $account = NULL) {
   global $user;
+
+  if (!$node) {
+    return FALSE;
+  }
+  // If no user object is supplied, the access check is for the current user.
+  if (empty($account)) {
+    $account = $user;
+  }
   $allowed_types = variable_get('nodeaccess-types', array());
   if ($op == 'grant') {
     if ($node->nid && $allowed_types[$node->type] &&
-        (user_access('grant node permissions') ||
-         (user_access('grant editable node permissions') && node_access('update', $node)) ||
-         (user_access('grant deletable node permissions') && node_access('delete', $node)) ||
-         (user_access('grant own node permissions') && ($user->uid == $node->uid)))) {
+        (user_access('grant node permissions', $account) ||
+         (user_access('grant editable node permissions', $account) && node_access('update', $node, $account)) ||
+         (user_access('grant deletable node permissions', $account) && node_access('delete', $node, $account)) ||
+         (user_access('grant own node permissions', $account) && ($account->uid == $node->uid)))) {
       return TRUE;
     }
   }
   return FALSE;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function nodeaccess_theme($existing = NULL, $type = NULL, $theme = NULL, $path = NULL) {
+  return array(
+    'nodeaccess_admin_form_roles' => array('arguments' => array('form')),
+    'nodeaccess_admin_form_types' => array('arguments' => array('form')),
+    'nodeaccess_grants_form' => array('arguments' => array('form'))
+  );
 }
 
 /**
@@ -74,7 +87,7 @@ function nodeaccess_admin() {
 /**
  * Menu callback. Draws the admin page.
  */
-function nodeaccess_admin_form($form_values = NULL) {
+function nodeaccess_admin_form(&$form_state) {
   // Set defaults from variable_get.
   $show = variable_get('nodeaccess-types', array());
   $roles = nodeaccess_get_role_aliases();
@@ -164,7 +177,8 @@ function nodeaccess_admin_form($form_values = NULL) {
 /**
  * Submit function for nodeaccess_admin_form.
  */
-function nodeaccess_admin_form_submit($form_id, $form_values) {
+function nodeaccess_admin_form_submit($form, &$form_state) {
+  $form_values = $form_state['values'];
   // Save priority.
   variable_set('nodeaccess-priority', $form_values['priority']);
   // Save preserve.
@@ -209,7 +223,7 @@ function nodeaccess_admin_form_submit($form_id, $form_values) {
   variable_set('nodeaccess_authors', $author_prefs);
   // Save allowed node types.
   variable_set('nodeaccess-types', $allowed_types);
-  node_access_rebuild();
+  node_access_needs_rebuild(TRUE);
   drupal_set_message(t('Grants saved.'));
 }
 
@@ -259,18 +273,16 @@ function theme_nodeaccess_admin_form_types($form) {
 /**
  * Menu callback. Draws the grant tab.
  */
-function nodeaccess_grants($nid) {
-  $node = node_load($nid);
+function nodeaccess_grants($node) {
   drupal_set_title(check_plain($node->title));
-  return drupal_get_form('nodeaccess_grants_form', $node->nid);
+  return drupal_get_form('nodeaccess_grants_form', $node);
 }
 
 /**
  * Menu callback. Draws the grant tab.
  */
-function nodeaccess_grants_form($nid, $form_values = NULL) {
-  $node = node_load($nid);
-  $form_values = $_POST;
+function nodeaccess_grants_form(&$form_state, $node) {
+  $form_values =& $form_state['values'];
   if (!$form_values) {
     $form_values = array();
     // Load all roles.
@@ -284,17 +296,6 @@ function nodeaccess_grants_form($nid, $form_values = NULL) {
       $form_values['uid'][$account->uid] = array('name' => $account->name, 'keep' => 1, 'grant_view' => $account->grant_view, 'grant_update' => $account->grant_update, 'grant_delete' => $account->grant_delete);
     }
   } else {
-    // Delete unkept users.
-    if (is_array($form_values['uid'])) {
-      foreach ($form_values['uid'] as $uid => $row) {
-        if (!$row['keep']) {
-          unset($form_values['uid'][$uid]);
-        }
-      }
-    }
-    if (!$form_values['uid']) {
-      unset($form_values['uid']);
-    }
     // Perform search.
     if ($form_values['keys']) {
       $sql = "SELECT uid, name FROM {users} WHERE name LIKE '%%%s%%'";
@@ -368,28 +369,16 @@ function nodeaccess_grants_form($nid, $form_values = NULL) {
       $form['uid'][$key]['keep'] = array('#type' => 'checkbox', '#default_value' => $field['keep']);
       if ($allowed_grants['view']) {
         $form['uid'][$key]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $field['grant_view']);
-        // Because of a bug in the form API, dynamic checkboxes
-        // must be checked explicitly.
-        if ($field['grant_view']) {
-          $form['uid'][$key]['grant_view']['#attributes'] = array('checked' => 'checked');
-        }
       } else if ($preserve) {
-        // Dynamic hidden fields work fine.
         $form['uid'][$key]['grant_view'] = array('#type' => 'hidden', '#value' => $field['grant_view']);
       }
       if ($allowed_grants['edit']) {
         $form['uid'][$key]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $field['grant_update']);
-        if ($field['grant_update']) {
-          $form['uid'][$key]['grant_update']['#attributes'] = array('checked' => 'checked');
-        }
       } else if ($preserve) {
         $form['uid'][$key]['grant_update'] = array('#type' => 'hidden', '#value' => $field['grant_update']);
       }
       if ($allowed_grants['delete']) {
         $form['uid'][$key]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $field['grant_delete']);
-        if ($field['grant_delete']) {
-          $form['uid'][$key]['grant_delete']['#attributes'] = array('checked' => 'checked');
-        }
       } else if ($preserve) {
         $form['uid'][$key]['grant_delete'] = array('#type' => 'hidden', '#value' => $field['grant_delete']);
       }
@@ -404,7 +393,7 @@ function nodeaccess_grants_form($nid, $form_values = NULL) {
     $form['keys'] = array('#type' => 'textfield', '#default_value' => $form_values['keys'], '#size' => 40);
   }
 
-  $form['search'] = array('#type' => 'button', '#value' => t('Search'));
+  $form['search'] = array('#type' => 'submit', '#value' => t('Search'));
 
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
 
@@ -414,8 +403,8 @@ function nodeaccess_grants_form($nid, $form_values = NULL) {
 /**
  * Validate function for nodeaccess_grants_form.
  */
-function nodeaccess_grants_form_validate($form_id, $form_values) {
-  global $form_values;
+function nodeaccess_grants_form_validate($form, &$form_state) {
+  $form_values =& $form_state['values'];
   // Delete unkept users.
   if (is_array($form_values['uid'])) {
     foreach ($form_values['uid'] as $uid => $row) {
@@ -427,13 +416,18 @@ function nodeaccess_grants_form_validate($form_id, $form_values) {
   if (!$form_values['uid']) {
     unset($form_values['uid']);
   }
+  if ($form_state['clicked_button']['#id'] == 'edit-search') {
+    $form_state['rebuild'] = TRUE;
+  } else {
+    unset($form_state['rebuild']);
+  }
 }
 
 /**
  * Submit function for nodeaccess_grants_form.
  */
-function nodeaccess_grants_form_submit($form_id, $form_values) {
-  global $form_values;
+function nodeaccess_grants_form_submit($form, &$form_state) {
+  $form_values =& $form_state['values'];
   global $user;
   $grants = array();
   $nid = $form_values['nid'];
@@ -570,6 +564,27 @@ function nodeaccess_node_grants($account, $op) {
  */
 function nodeaccess_nodeapi(&$node, $op) {
   switch ($op) {
+    case 'insert':
+      // New node, write default permissions.
+      $grants = nodeaccess_node_access_records($node);
+      foreach(array('uid', 'rid', 'author') as $type) {
+        $realm = 'nodeaccess_' . $type;
+        node_access_write_grants($node, $grants, $realm);
+      }
+      // Done, default permissions are not written into nodeaccess.
+    break;
+    case 'update':
+      // Node author may have changed, overwrite old record.
+      $author_prefs = variable_get('nodeaccess_authors', array());
+      // Array is prepopulated with grant values.
+      $grant = $author_prefs[$node->type];
+      $grant['gid'] = $node->uid;
+      $grant['realm'] = 'nodeaccess_author';
+      $grants = array();
+      $grants[] = $grant;
+      node_access_write_grants($node, $grants, 'nodeaccess_author');
+      // Done, author permissions are not written into nodeaccess.
+    break;
     case 'delete':
       // Deleting node, delete related permissions.
       db_query('DELETE FROM {nodeaccess} WHERE nid = %d', $node->nid);
@@ -632,7 +647,6 @@ function nodeaccess_node_access_records($node) {
  * Implementation of hook_enable().
  */
 function nodeaccess_enable() {
-  node_access_rebuild();
 }
 
 /**
@@ -640,7 +654,6 @@ function nodeaccess_enable() {
  */
 function nodeaccess_disable() {
   nodeaccess_disabling(TRUE);
-  node_access_rebuild();
 }
 
 function nodeaccess_disabling($set = NULL) {
@@ -688,7 +701,7 @@ function nodeaccess_node_type($op, $info) {
       $author_prefs = variable_get('nodeaccess_authors', array());
       $author_prefs[$info->type] = array('grant_view' => 1, 'grant_update' => 1, 'grant_delete' => 1);
       variable_set('nodeaccess_authors', $author_prefs);
-      node_access_rebuild();
+      node_access_needs_rebuild(TRUE);
     break;
   }
 }
