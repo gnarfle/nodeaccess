@@ -7,20 +7,12 @@ permission to view, edit or delete each individual node by user or role. Once en
 a 'grant' tab will appear on node pages. You can click this and assign permissions for 
 that node.
 
-WARNINGS!
-
-This is a development version for drupal 5.x. It has not been tested
-extensively, and the upgrade process is rather complicated. Please do not throw
-it on a production system. If you really need this module ASAP, please test it
-out on a development copy of your website first.
 
 INSTALLATION:
 
 Put the module in your drupal modules directory and enable it in admin/modules.
 
-If you are upgrading, be sure to run update.php as several changes are
-required. This attempts to migrate your previous settings to the new setup in
-drupal 5. I would strongly recommend backing up your database before installing
+I would strongly recommend backing up your database before installing
 this module...
 
 IMPORTANT!
@@ -63,6 +55,4 @@ to edit a node except for one user, you cannot do this by granted edit permissio
 authenticated users, then adding the user to the node without view permissions. Drupal
 doesn't let you do that.
 
-I haven't fully explored using this with multiple access control modules in
-drupal 5 yet, so YMMV.
 

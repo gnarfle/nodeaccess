@@ -1,5 +1,7 @@
 <?php
 
+// $Id $
+
 /**
  * Implementation of hook_install().
  */
@@ -143,9 +145,10 @@ function nodeaccess_uninstall() {
   variable_del('nodeaccess_authors');
   foreach (node_get_types() as $type => $name) {
     variable_del('nodeaccess_' . $type);
+    variable_del('nodeaccess_' . $type . '_userreference');
   }
   // Remove tables.
   drupal_uninstall_schema('nodeaccess');
 }
 
-?>
+
