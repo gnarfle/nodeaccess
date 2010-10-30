@@ -6,13 +6,29 @@
  */
  
 function nodeaccess_menu() {
-  $items['admin/user/nodeaccess'] = array(
-    'title' => 'Nodeaccess',
-    'description' => 'Change default settings for the Nodeaccess module.',
-    'page callback' => 'nodeaccess_admin',
-    'access arguments' => array('administer nodeaccess')
+
+  $items['admin/structure/types/manage/%node_type/nodeaccess'] = array(
+    'title' => t('Permissions'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nodeaccess_admin_form', 4),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer content types'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'nodeaccess.admin.inc'
   );
+
+  $items['nodeaccess/usersearch'] = array(
+    'page callback' => 'nodeaccess_usersearch',
+    'type' => MENU_CALLBACK,
+    'access callback' => 'user_access',
+    'access arguments'  => array('')
+  );
+  
   return $items;
+}
+
+function nodeaccess_adming_settings_access() {
+  return true;
 }
 
 function nodeaccess_permission() {
@@ -41,6 +57,14 @@ function nodeaccess_theme() {
   return array(
     'nodeaccess_grants' => array(
       'arguments' => array('form' => NULL)
+    ),
+    'nodeaccess_admin_roles' => array(
+      'render element' => 'form',
+      'template' => 'templates/admin_roles'
+    ),
+    'nodeaccess_admin_users' => array(
+      'render element'  => 'form',
+      'template'  => 'templates/admin_users'
     )
   );
 }
