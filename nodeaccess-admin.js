@@ -1,22 +1,48 @@
+var timeout;
+
 (function ($) {
   Drupal.behaviors.nodeaccessAdmin = {
     attach: function (context) {
-      console.log('yep');
-      $('input#edit-grants-new-name', context).val('Add user...').focus(function() {
-        if ( $(this).val() == 'Add user...') { 
-          $(this).val(''); 
-        }
+      $('#dialog').dialog({
+        autoOpen: false,
+        show: "blind",
+        hide: "explode",
+        buttons: {
+          "Add users": function() {
+            
+          }
+        } 
       });
+
       
       // submit handler
-      $('input#add-user', context).click(function() {
-        if ($('input#edit-grants-new-name').length > 0 && $('input#edit-grants-new-name').val() != 'Add user...') {
-          $.post(Drupal.settings.basePath + 'nodeaccess/usersearch', { user: $('input#edit-grants-new-name').val()}, function(response) {
-            console.log(response);
+      $('a#add-user', context).once().click( function() {
+        $( "#dialog" ).dialog( "open" );
+        return false;
+      });
+      
+      $('#edit-grants-filter', context).once().keypress(function() {
+        // set a timeout
+        clearTimeout(timeout);
+        timeout = setTimeout(function() {
+          $.post(Drupal.settings.basePath + 'nodeaccess/usersearch', {filter: $('#edit-grants-filter').val()}, function(response) {
+            $('#user-list').html(response);
           });
-          $(this).parents('.fieldset-wrapper').html('foobar');
-        }
+        }, 3000);
+        
+      });
+      
+      // hijack the pager to make it work ajaxily
+      $('#user-list ul.pager a', context).live('click', function() {
+        var link = $(this).attr('href');
+        var parts = link.split('?');
+        var params = '?' + parts[1]
+        $.post(Drupal.settings.basePath + 'nodeaccess/usersearch' + params, {filter: $('#edit-grants-filter').val()}, function(response) {
+          $('#user-list').html(response);
+        });
+        return false;
       });
     }
   }
+
 })(jQuery);

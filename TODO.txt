@@ -1,0 +1,8 @@
+- ignore author settings for if authored by anonymous user
+- hook on node change author to update settings?
+- make sure permissions rebuild on uninstall?
+- select list or name matching in user search
+- default permissions for new content types, and new roles?
+- use t() on all role name output
+- hook_node_operations
+- control access to files

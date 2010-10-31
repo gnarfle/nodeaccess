@@ -12,3 +12,11 @@ foreach ($users as $user) {
 
 echo theme('table', array('header' => $header, 'rows' => $rows));
 ?>
+<a id="add-user">Add User...</a>
+
+<div id="dialog" title="Add User">
+  <?php echo drupal_render($form['filter']); ?>
+  <div id="user-list">
+    <?php echo drupal_render($form['search']); ?>
+  </div>
+</div>

@@ -21,14 +21,50 @@ function nodeaccess_menu() {
     'page callback' => 'nodeaccess_usersearch',
     'type' => MENU_CALLBACK,
     'access callback' => 'user_access',
-    'access arguments'  => array('')
+    'access arguments'  => array('grant node permissions'),
   );
   
   return $items;
 }
 
-function nodeaccess_adming_settings_access() {
-  return true;
+function nodeaccess_usersearch() {
+  $header = array(
+    'username' => array('data' => t('Username'), 'field' => 'u.name'),
+    'mail' => array('data' => t('Email'), 'field' => 'u.mail')
+  );
+
+  $query = db_select('users', 'u');
+  $query->condition('u.uid', 0, '<>');
+  user_build_filter_query($query);
+
+  $count_query = clone $query;
+  $count_query->addExpression('COUNT(u.uid)');
+
+  $query = $query->extend('PagerDefault')->extend('TableSort');
+  $query
+    ->fields('u', array('uid', 'name', 'mail'))
+    ->limit(1)
+    ->orderByHeader($header)
+    ->setCountQuery($count_query);
+  $result = $query->execute();
+
+  $accounts = array();
+  foreach ($result as $account) {
+    $options[$account->uid] = array(
+      'username' => theme('username', array('account' => $account)),
+      'mail' => $account->mail,
+    );
+  }
+  
+  $form['accounts'] = array(
+    '#type' => 'tableselect',
+    '#header' => $header,
+    '#options' => $options,
+    '#empty' => t('No people available.'),
+  );
+  $form['pager'] = array('#markup' => theme('pager'));
+  
+  echo drupal_render($form);
 }
 
 function nodeaccess_permission() {

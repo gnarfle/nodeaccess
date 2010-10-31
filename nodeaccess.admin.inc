@@ -1,8 +1,10 @@
 <?php
 
 function nodeaccess_admin_form($form, &$form_state, $type) {
-  drupal_add_js(drupal_get_path('module', 'nodeaccess') . '/nodeaccess-admin.js');
-  
+  // drupal_add_js('misc/ui/jquery.ui.dialog.min.js');
+  // drupal_add_js(drupal_get_path('module', 'nodeaccess') . '/nodeaccess-admin.js');
+  // drupal_add_css(drupal_get_path('module', 'nodeaccess') . '/nodeaccess.css');
+  // drupal_add_css('/misc/ui/jquery.ui.dialog.css');
   $type = $type->type;
     
   // Set defaults from variable_get.
@@ -67,7 +69,12 @@ function nodeaccess_admin_form($form, &$form_state, $type) {
     '#collapsed' => FALSE,
     '#title'  => t('User Permissions'),
     '#tree'   => TRUE,
-    '#theme'  => 'nodeaccess_admin_users'
+    '#theme'  => 'nodeaccess_admin_users',
+    '#attached' => array(
+      'js'  => array( drupal_get_path('module', 'nodeaccess') . '/nodeaccess-admin.js' ),
+      'css' => array( drupal_get_path('module', 'nodeaccess') . '/nodeaccess.css' ),
+      'library' => array( array( 'system', 'ui.dialog' ) )
+    )
   );
   
   $users = array();
@@ -78,12 +85,55 @@ function nodeaccess_admin_form($form, &$form_state, $type) {
     $form['nodeaccess']['content-types'][$type]['users']['grants'][$id]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
   }
   
-  // last row to add a new user
-  $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['name'] = array('#type' => 'textfield', '#size' => 20, '#autocomplete_path' => 'user/autocomplete', '#suffix' => " <input type='button' id='add-user' value='Add' />");
-  $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['grant_view'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
-  $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['grant_update'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
-  $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+  // user search...
+  $header = array(
+    'username' => array('data' => t('Username'), 'field' => 'u.name'),
+    'mail' => array('data' => t('Email'), 'field' => 'u.mail')
+  );
+
+  $query = db_select('users', 'u');
+  $query->condition('u.uid', 0, '<>');
+  user_build_filter_query($query);
+
+  $count_query = clone $query;
+  $count_query->addExpression('COUNT(u.uid)');
+
+  $query = $query->extend('PagerDefault')->extend('TableSort');
+  $query
+    ->fields('u', array('uid', 'name', 'mail'))
+    ->limit(1)
+    ->orderByHeader($header)
+    ->setCountQuery($count_query);
+  $result = $query->execute();
+
+  $accounts = array();
+  foreach ($result as $account) {
+    $options[$account->uid] = array(
+      'username' => theme('username', array('account' => $account)),
+      'mail' => $account->mail,
+    );
+  }
+
+  $form['nodeaccess']['content-types'][$type]['users']['grants']['filter'] = array(
+    '#type' => 'textfield',
+    '#title'  => t('Filter Users'),
+    '#size'   => 20
+  );
   
+  $form['nodeaccess']['content-types'][$type]['users']['grants']['search']['accounts'] = array(
+    '#type' => 'tableselect',
+    '#header' => $header,
+    '#options' => $options,
+    '#empty' => t('No people available.'),
+  );
+  $form['nodeaccess']['content-types'][$type]['users']['grants']['search']['pager'] = array('#markup' => theme('pager'));
+  
+  // last row to add a new user
+  // $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['name'] = array('#type' => 'textfield', '#size' => 20, '#autocomplete_path' => 'user/autocomplete', '#suffix' => " <input type='button' id='add-user' value='Add' />");
+  // $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['grant_view'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+  // $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['grant_update'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+  // $form['nodeaccess']['content-types'][$type]['users']['grants']['new']['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+  //   
   //TODO  user reference permissions
   
   
@@ -139,4 +189,8 @@ function nodeaccess_admin_form($form, &$form_state, $type) {
   // }
   $form['submit'] = array('#type' => 'submit', '#value' => t('Save Grants'));
   return $form;
+}
+
+function nodeaccess_filter_users($form, $form_state) {
+  return 'foo';
 }
