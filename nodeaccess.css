@@ -1,3 +1,7 @@
 #dialog {
   display: hidden;
 }
+
+a#add-user {
+  cursor: pointer;
+}
