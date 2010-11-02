@@ -1,5 +1,42 @@
 <?php
 
+/* global configuration for nodeaccess */
+function nodeaccess_admin_settings() {
+  $settings = nodeaccess_get_settings();
+  
+  $form['nodeaccess']['settings'] = array('#tree' => true, '#type' => 'fieldset', '#title' => t('Settings'));
+  
+  $form['nodeaccess']['settings']['defaults_type'] = array(
+    '#type'         => 'radios',
+    '#title'        => 'Default Permissions Type',
+    '#options'      => array(t('Global Defaults'), t('Content Type'), t('Taxonomy') ),
+    '#description'  => t('This option determines how the default permissions for nodes are configured. The options are: <ul><li><b>Global Defaults:</b> Choosing this option allows you to set default permissions on this page. This is the best option if you want to have one set of default permissions that can be overridden on a per node basis</li><li><b>Content Type:</b> This option allows you to specify default permissions per content (node) type. Choose this is you want to have different permissions for each node type on your site.</li><li><b>Taxonomy:</b> This Option allows you to set permissions per taxonomy vocabulary/term. Choose this if you want to be able to have different permissions per taxonomy term.</li></ul>'),
+    '#default_value'  => $settings['defaults_type'],
+    '#attached' => array(
+      'js'  => array( drupal_get_path('module', 'nodeaccess') . '/nodeaccess-admin.js' ),
+      'css' => array( drupal_get_path('module', 'nodeaccess') . '/nodeaccess.css' ),
+      'library' => array( array( 'system', 'ui.dialog' ) )
+    )
+  );
+  
+  $form['nodeaccess']['settings']['pernode'] = array('#type' => 'checkbox',
+                            '#title' => t('Allow per node access control'),
+                            '#default_value' => 1,
+                            '#description' => '<small>' . t('If you check this box, users with appropriate permision will be able to configure per node permissions on the node add/edit form.') . '</small>');
+                           
+
+  $form['nodeaccess']['settings']['help'] = array('#markup' => t('Select which permissions you want to be available on the node add/edit form. For example, if you want users to be able to assign view permissions but not edit or delete, only select view here.'));
+  $form['nodeaccess']['settings']['allow_view'] = array('#default_value' => $settings['allow_view'], '#type' => 'checkbox', '#title' => t('View'));
+  $form['nodeaccess']['settings']['allow_edit'] = array('#default_value' => $settings['allow_edit'], '#type' => 'checkbox', '#title' => t('Edit'));
+  $form['nodeaccess']['settings']['allow_delete'] = array('#default_value' => $settings['allow_delete'], '#type' => 'checkbox', '#title' => t('Delete'));
+
+  if ( $settings['defaults_type'] === "0" ) {
+    $form['nodeaccess']['default_permissions'] = array( '#tree' => TRUE, '#type' => 'fieldset', '#title' => 'Default Permissions');
+    $form['nodeaccess']['default_permissions']['settings'] = nodeaccess_permissions_form( );
+  }
+  return system_settings_form($form);
+}
+
 function nodeaccess_admin_form($form, &$form_state, $type) {
   // drupal_add_js('misc/ui/jquery.ui.dialog.min.js');
   // drupal_add_js(drupal_get_path('module', 'nodeaccess') . '/nodeaccess-admin.js');

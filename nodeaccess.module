@@ -7,6 +7,17 @@
  
 function nodeaccess_menu() {
 
+  /* main prefs */
+  $items['admin/config/content/nodeaccess'] = array(
+    'title' => 'Nodeaccess settings',
+    'description' =>  'Global congiruation for nodeaccess',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('nodeaccess_admin_settings'),
+    'file' => 'nodeaccess.admin.inc',
+    'access arguments' => array('administer nodeaccess'),
+  );
+  
+  /* per content type prefs */
   $items['admin/structure/types/manage/%node_type/nodeaccess'] = array(
     'title' => t('Permissions'),
     'page callback' => 'drupal_get_form',
@@ -272,4 +283,115 @@ function theme_nodeaccess_grants_form($form) {
   $output .= drupal_render($form);
 
   return $output;
+}
+
+function nodeaccess_get_settings() {
+  $settings = variable_get('nodeaccess', array(
+    'defaults_type' => 1,
+    'allow_view'    => 1,
+    'allow_edit'    => 1,
+    'allow_delete'  => 1
+  ));
+  
+  return $settings;
+}
+
+function nodeaccess_permissions_form( ) {
+  // Select roles the permissions of which you want to allow users to
+  // view and edit, and the aliases and weights of those roles.
+  $form['roles'] = array('#type' => 'fieldset',
+                        '#collapsible' => TRUE,
+                        '#collapsed' => TRUE,
+                        '#title' => t('Allowed Roles'),
+                        '#tree' => TRUE,
+                        '#theme' => 'nodeaccess_admin_form_roles',
+                        '#description' => '<small>' . t('The selected roles will be listed on individual node add/edit forms. If you wish for certain roles to be hidden from users, make sure they are not selected here.') . '</small>');
+  
+  $roles = user_roles();
+  foreach ($roles as $id => $role) {
+    $form['roles'][$id]['name'] = array('#type' => 'hidden', '#value' => $role);
+    $form['roles'][$id]['allow'] = array('#type' => 'checkbox', '#title' => $role, '#default_value' => $allowed_roles[$id]);
+  }
+
+  $form['role_grants'] = array('#type' => 'fieldset',
+                                                              '#collapsible' => TRUE,
+                                                              '#collapsed' => TRUE,
+                                                              '#title' => 'Default Role Permissions',
+                                                              '#tree' => TRUE,
+                                                              '#theme' => 'nodeaccess_admin_roles');
+                                                              
+  foreach( $roles as $id => $role ) {
+    $form['role_grants'][$id]['name'] = array('#type' => 'hidden', '#value' => $role);
+    $form['role_grants'][$id]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+    $form['role_grants'][$id]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+    $form['role_grants'][$id]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+  }
+  
+  // user based permissions
+  $form['user_grants'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#title'  => t('Default User Permissions'),
+    '#tree'   => TRUE,
+    '#theme'  => 'nodeaccess_admin_users',
+    '#attached' => array(
+      'js'  => array( drupal_get_path('module', 'nodeaccess') . '/nodeaccess-admin.js' ),
+      'css' => array( drupal_get_path('module', 'nodeaccess') . '/nodeaccess.css' ),
+      'library' => array( array( 'system', 'ui.dialog' ) )
+    )
+  );
+  
+  $users = array();
+  foreach( $users as $id => $user ) {
+    $form['user_grants'][$id]['name'] = array('#type' => 'markup', '#value' => $user);
+    $form['user_grants'][$id]['grant_view'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+    $form['user_grants'][$id]['grant_update'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+    $form['user_grants'][$id]['grant_delete'] = array('#type' => 'checkbox', '#default_value' => $author_prefs[$type]['grant_view']);
+  }
+  
+  // user search...
+  $header = array(
+    'username' => array('data' => t('Username'), 'field' => 'u.name'),
+    'mail' => array('data' => t('Email'), 'field' => 'u.mail')
+  );
+
+  $query = db_select('users', 'u');
+  $query->condition('u.uid', 0, '<>');
+  user_build_filter_query($query);
+
+  $count_query = clone $query;
+  $count_query->addExpression('COUNT(u.uid)');
+
+  $query = $query->extend('PagerDefault')->extend('TableSort');
+  $query
+    ->fields('u', array('uid', 'name', 'mail'))
+    ->limit(1)
+    ->orderByHeader($header)
+    ->setCountQuery($count_query);
+  $result = $query->execute();
+
+  $accounts = array();
+  foreach ($result as $account) {
+    $options[$account->uid] = array(
+      'username' => theme('username', array('account' => $account)),
+      'mail' => $account->mail,
+    );
+  }
+
+  $form['user_grants']['filter'] = array(
+    '#type' => 'textfield',
+    '#title'  => t('Filter Users'),
+    '#size'   => 20
+  );
+  
+  $form['user_grants']['search']['accounts'] = array(
+    '#type' => 'tableselect',
+    '#header' => $header,
+    '#options' => $options,
+    '#empty' => t('No people available.'),
+  );
+  $form['user_grants']['search']['pager'] = array('#markup' => theme('pager'));
+  
+  return $form;
 }

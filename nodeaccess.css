@@ -5,3 +5,8 @@
 a#add-user {
   cursor: pointer;
 }
+
+fieldset#edit-nodeaccess .form-item form-type-checkbox {
+  float: left;
+  padding-right: 10px;
+}
