@@ -87,7 +87,7 @@ function nodeaccess_admin() {
 /**
  * Menu callback. Draws the admin page.
  */
-function nodeaccess_admin_form(&$form_state) {
+function nodeaccess_admin_form($form_state) {
   // Set defaults from variable_get.
   $show = variable_get('nodeaccess-types', array());
   $roles = nodeaccess_get_role_aliases();
@@ -195,7 +195,7 @@ function nodeaccess_admin_form(&$form_state) {
 /**
  * Submit function for nodeaccess_admin_form.
  */
-function nodeaccess_admin_form_submit($form, &$form_state) {
+function nodeaccess_admin_form_submit($form, $form_state) {
   $form_values = $form_state['values'];
   // Save priority.
   variable_set('nodeaccess-priority', $form_values['priority']);
@@ -324,7 +324,7 @@ function nodeaccess_grants($node) {
 /**
  * Menu callback. Draws the grant tab.
  */
-function nodeaccess_grants_form(&$form_state, $node) {
+function nodeaccess_grants_form($form_state, $node) {
   $form_values =& $form_state['values'];
   if (!$form_values) {
     $form_values = array();
@@ -446,7 +446,7 @@ function nodeaccess_grants_form(&$form_state, $node) {
 /**
  * Validate function for nodeaccess_grants_form.
  */
-function nodeaccess_grants_form_validate($form, &$form_state) {
+function nodeaccess_grants_form_validate($form, $form_state) {
   $form_values =& $form_state['values'];
   // Delete unkept users.
   if (is_array($form_values['uid'])) {
@@ -469,7 +469,7 @@ function nodeaccess_grants_form_validate($form, &$form_state) {
 /**
  * Submit function for nodeaccess_grants_form.
  */
-function nodeaccess_grants_form_submit($form, &$form_state) {
+function nodeaccess_grants_form_submit($form, $form_state) {
   _nodeaccess_grants_form_submit($form, $form_state);
   drupal_set_message(t('Grants saved.'));
 }
@@ -479,7 +479,7 @@ function nodeaccess_grants_form_submit($form, &$form_state) {
  * user notifications aren't displayed when a userreference field causes the
  * updating.
  */
-function _nodeaccess_grants_form_submit($form, &$form_state) {
+function _nodeaccess_grants_form_submit($form, $form_state) {
   $form_values =& $form_state['values'];
   global $user;
   $grants = array();
@@ -612,7 +612,7 @@ function nodeaccess_node_grants($account, $op) {
 /**
  * Implementation of hook_nodeapi().
  */
-function nodeaccess_nodeapi(&$node, $op) {
+function nodeaccess_nodeapi($node, $op) {
   switch ($op) {
     case 'insert':
       // New node, write default permissions.
