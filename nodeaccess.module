@@ -37,7 +37,23 @@ function nodeaccess_menu() {
  * Implementation of hook_perm().
  */
 function nodeaccess_perm() {
-  return array('administer nodeaccess', 'grant node permissions', 'grant editable node permissions', 'grant deletable node permissions', 'grant own node permissions');
+  return array(
+    'administer nodeaccess' => array(
+      'title' => t('Administer Nodeaccess')
+    ), 
+    'grant node permissions' => array(
+      'title' => t('Grant Node Permissions')
+    ), 
+    'grant editable node permissions' => array(
+      'title' => t('Grant node edit permissions')
+    ), 
+    'grant deletable node permissions' => array(
+      'title' => t('Grant node delete permissions')
+    ), 
+    'grant own node permissions' => array(
+      'title' => t('Grant own node permissions')
+    )
+  );
 }
 
 /**
