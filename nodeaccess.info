@@ -3,4 +3,3 @@ description = Provides per node access control
 core = 7.x
 version = 7.0-1.0
 configure = admin/config/nodeaccess
-tags[] = developer

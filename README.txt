@@ -1,5 +1,7 @@
 Node Access Module
 
+(Hopelessly out of date)
+
 This module allows you to manage permissions for nodes by role and user. In other words,
 it implements per node access control for users and groups. With this module, you can
 restrict access to any individual node without having to use taxonomy. You can assign 

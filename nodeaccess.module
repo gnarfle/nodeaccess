@@ -1,5 +1,4 @@
 <?php
-// $Id: nodeaccess.module,v 1.4.2.7.2.9.2.2 2009/03/08 00:00:45 debtman7 Exp $
 
 /**
  * Implements hook_help().
