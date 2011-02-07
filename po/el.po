@@ -1,6 +1,6 @@
 # translation of el.po to Greek
 # $Id: el.po,v 1.1.2.1 2008/01/03 20:45:35 goofyx Exp $
-#
+# 
 # LANGUAGE translation of Drupal (nodeaccess.module)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from files:

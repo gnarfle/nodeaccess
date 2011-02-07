@@ -3,7 +3,7 @@
 # LANGUAGE translation of Drupal (general)
 # Copyright YEAR NAME <EMAIL@ADDRESS>
 # Generated from file: nodeaccess.module,v 1.4.2.7.2.7 2007/04/30 19:35:18 debtman7
-#
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: Module nodeaccess Drupal 5.1\n"
