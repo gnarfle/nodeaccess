@@ -33,6 +33,17 @@ function nodeaccess_menu() {
 }
 
 /**
+ * Implements hook_admin_paths().
+ */
+function nodeaccess_admin_paths() {
+  $paths = array(
+    'node/*/grant' => TRUE,
+    'admin/config/nodeaccess' => TRUE,
+  );
+  return $paths;
+}
+
+/**
  * Implements hook_permission().
  */
 function nodeaccess_permission() {
@@ -451,14 +462,14 @@ function theme_nodeaccess_admin_form_types($variables) {
  * Menu callback. Draws the grant tab.
  */
 function nodeaccess_grants($node) {
-  drupal_set_title($node->title);
+//  drupal_set_title($node->title);
   return drupal_get_form('nodeaccess_grants_form', $node);
 }
 
 /**
  * Menu callback. Draws the grant tab.
  */
-function nodeaccess_grants_form($form, $form_state, $node) {
+function nodeaccess_grants_form($form, &$form_state, $node) {
   $form_values = &$form_state['values'];
   if (!$form_values) {
     $form_values = array();
@@ -491,14 +502,18 @@ function nodeaccess_grants_form($form, $form_state, $node) {
     // Perform search.
     if ($form_values['keys']) {
       // TODO: rewrite
-      $sql = "SELECT uid, name FROM {users} WHERE name LIKE '%%:name%%'";
-      $params = array(preg_replace('!\*+!', '%', $form_values['keys']));
-      if (is_array($form_values['uid'])) {
-        $sql .= ' AND uid NOT IN (%:uid)';
-        $users[] = implode(',', array_keys($form_values['uid']));
+      $sql = "SELECT uid, name FROM {users} WHERE name LIKE :name";
+      $name = preg_replace('!\*+!', '%', $form_values['keys']);
+      
+      $users = '';
+      if ( isset($form_values['uid']) && is_array($form_values['uid'])) {
+        $sql .= ' AND uid NOT IN (:uid)';
+        $users = implode(',', array_keys($form_values['uid']));
       }
-      $result = db_query($sql, $params);
+
+      $result = db_query($sql, array(':name' => '%' . $name . '%', ':uid' => $users));//$params);
       foreach($result as $account) {
+
         $form_values['uid'][$account->uid] = array(
           'name' => $account->name,
           'keep' => 0,
@@ -507,31 +522,18 @@ function nodeaccess_grants_form($form, $form_state, $node) {
     }
     // Calculate default grants for found users.
     // rewrite
-    if (is_array($form_values['uid'])) {
+    if (isset($form_values['uid']) && is_array($form_values['uid'])) {
       foreach (array_keys($form_values['uid']) as $uid) {
         if (!$form_values['uid'][$uid]['keep']) {
           foreach (array('grant_view', 'grant_update', 'grant_delete') as $grant_type) {
-/*
-            $form_values['uid'][$uid][$grant_type] = db_query("SELECT count(*) FROM {node_access} na LEFT JOIN {users_roles} r ON na.gid = r.rid WHERE nid = :nid AND realm = :realm AND uid = :uid AND %s = :%s LIMIT 1 OFFSET 0", array(':nid' => : nid, ':realm' => : realm, ':uid' => : uid, ':%s' => : % s, '' => array(
-                ':nid' => $node->nid,
-                ':realm' => 'nodeaccess_rid',
-                ':uid' => $uid,
-                ':%s' => 1,
-                '' => $grant_type,
-              )))->fetchField() || db_query("SELECT count(*) FROM {node_access} na WHERE nid = :nid AND realm = :realm AND gid = :gid AND %s = :%s LIMIT 1 OFFSET 0", array(':nid' => : nid, ':realm' => : realm, ':gid' => : gid, ':%s' => : % s, '' => array(
-                ':nid' => $node->nid,
-                ':realm' => 'nodeaccess_uid',
-                ':gid' => $uid,
-                ':%s' => 1,
-                '' => $grant_type,
-              )))->fetchField();
-*/
+            $form_values['uid'][$uid][$grant_type] = db_query("SELECT count(*) FROM {node_access} na LEFT JOIN {users_roles} r ON na.gid = r.rid WHERE nid = :nid AND realm = :realm AND uid = :uid AND :type = 1 LIMIT 1", array(':nid' => $node->nid, ':realm' => 'nodeaccess_rid', ':uid' => $uid, ':type' => $grant_type ))->fetchField() || 
+              db_query("SELECT count(*) FROM {node_access} na WHERE nid = :nid AND realm = :realm AND gid = :gid AND :type = 1 LIMIT 1", array(':nid' => $node->nid, ':realm' => 'nodeaccess_uid', ':gid' => $uid, ':type' => $grant_type))->fetchField();
           }
         }
       }
     }
   }
-
+  
   if ( !isset($form_values['rid'] ) ) {
     $form_values['rid'] = array();
   }
@@ -718,20 +720,23 @@ function nodeaccess_grants_form_validate($form, $form_state) {
   if (!isset($form_values['uid'])) {
     unset($form_values['uid']);
   }
-  if ($form_state['clicked_button']['#id'] == 'edit-search') {
-    $form_state['rebuild'] = TRUE;
-  }
-  else {
-    unset($form_state['rebuild']);
-  }
+
 }
 
 /**
  * Submit function for nodeaccess_grants_form.
  */
-function nodeaccess_grants_form_submit($form, $form_state) {
-  _nodeaccess_grants_form_submit($form, $form_state);
-  drupal_set_message(t('Grants saved.'));
+function nodeaccess_grants_form_submit($form, &$form_state) {
+
+  if ($form_state['clicked_button']['#id'] == 'edit-search') {
+    $form_state['rebuild'] = TRUE;
+    $form_state['storage']['values'] = $form_state['values'];
+  }
+  else {
+    unset($form_state['rebuild']);
+    _nodeaccess_grants_form_submit($form, $form_state);
+    drupal_set_message(t('Grants saved.'));
+  }
 }
 
 /**
@@ -1219,6 +1224,8 @@ function nodeaccess_delete_userreference($node) {
  *   The node to return grants for.
  * @return array
  *   An array of grants with keys 'rid' for roles and 'uid' for users.
+ *
+ * note: only works with userreference, not stable for D7...
  */
 function _nodeaccess_get_grants($node) {
   $grants = array();
