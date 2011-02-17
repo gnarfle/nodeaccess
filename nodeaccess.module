@@ -514,16 +514,18 @@ function nodeaccess_grants_form($form, &$form_state, $node) {
     // Perform search.
     if ($form_values['keys']) {
       // TODO: rewrite
+      $params = array();
       $sql = "SELECT uid, name FROM {users} WHERE name LIKE :name";
       $name = preg_replace('!\*+!', '%', $form_values['keys']);
-      
+      $params[':name'] = $name;
       $users = '';
       if ( isset($form_values['uid']) && is_array($form_values['uid'])) {
         $sql .= ' AND uid NOT IN (:uid)';
         $users = implode(',', array_keys($form_values['uid']));
+        $params[':uid'] = $users;
       }
 
-      $result = db_query($sql, array(':name' => '%' . $name . '%', ':uid' => $users));//$params);
+      $result = db_query($sql, $params);
       foreach($result as $account) {
 
         $form_values['uid'][$account->uid] = array(
