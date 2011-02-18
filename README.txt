@@ -1,3 +1,5 @@
+Note: The D7 1.3 port is in the branch DRUPAL-7--1. Version 2 is being released under the name Total Access - https://github.com/chadcf/Total-Access
+
 Node Access Module
 
 This module allows you to manage permissions for nodes by role and user. In other words,
