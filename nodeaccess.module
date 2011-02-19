@@ -88,7 +88,7 @@ function nodeaccess_access($op, $node, $account = NULL) {
   }
   $allowed_types = variable_get('nodeaccess-types', array());
   if ($op == 'grant') {
-    if ($node->nid && $allowed_types[$node->type] &&
+    if ($node->nid && isset($allowed_types[$node->type]) && $allowed_types[$node->type] &&
         (user_access('grant node permissions', $account) ||
          (user_access('grant editable node permissions', $account) && node_access('update', $node, $account)) ||
          (user_access('grant deletable node permissions', $account) && node_access('delete', $node, $account)) ||

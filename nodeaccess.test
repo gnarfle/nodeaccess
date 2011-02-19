@@ -1,0 +1,104 @@
+<?php
+
+/*
+ * Howto?
+ * - test appropriate nodeaccess table permissions on install
+ * - test nodeaccess table entries on uninstall?
+ */
+class NodeaccessTestCase extends DrupalWebTestCase {
+  // a user with administer nodeaccess permissions
+  protected $admin_user;
+  
+  // a user to test role based permissions
+  protected $role_user;
+  
+  // a user to test user based permissions
+  protected $normal_user;
+  
+  // create some random nodes
+  protected $nodes = array();
+  
+  public static function getInfo() {
+    return array(
+      'name'  => 'Nodeaccess',
+      'description' => 'Verify nodeaccess content permissions',
+      'group' => 'Nodeaccess'
+    );
+  }
+  
+  public function setUp() {
+    parent::setUp('nodeaccess');
+    
+    // create our privileged user
+    $this->admin_user = $this->drupalCreateUser(array(
+      'administer nodeaccess'
+    ));
+    
+    // create our role based user
+    $this->role_user = $this->drupalCreateUser(array(
+      'access content', 'grant node permissions'
+    ));
+    
+    // create a normal user
+    $this->user = $this->drupalCreateUser(array(
+      'access content'
+    ));
+    
+    // create some random nodes
+    for( $i = 0; $i < 5; $i++ ) {
+      $this->nodes[] = $this->drupalCreateNode(array('promote' => 1));
+    }
+    
+    // rebuild content permissions
+    node_access_rebuild();
+  }
+  
+  // Step 1: anonymous and authenticated users can see all nodes
+  public function testAnonymousView() {
+    $this->drupalLogout();
+    foreach($this->nodes as $node) {
+      $page = $this->drupalGet('node/' . $node->nid);
+      $this->assertNoText(t('Access Denied'), t('Make sure anonymous users can view all nodes after installation'));
+    }
+  }
+  
+  // Step 2: make sure authenticated users can view all nodes
+  public function testAuthenticatedView() {
+    $this->drupalLogin($this->user);
+    foreach($this->nodes as $node) {
+      $page = $this->drupalGet('node/' . $node->nid);
+      $this->assertNoText(t('Access Denied'), t('Make sure authenticated users can view all nodes after installation'));
+    }    
+  }
+  
+  // make sure admin user can access the settings
+  public function testAdminSettings() {
+    $this->drupalLogin($this->admin_user);
+    $page = $this->drupalGet('admin/config/system/nodeaccess');
+    $this->assertText(t('Give node grants priority'), t('Make sure admin user can view settings'));
+    
+    // this is going to get ugly
+    $edit = array();
+    
+    // enable all roles
+    foreach( user_roles() as $role ) {
+      $edit['role[' . $role->id . '][allow]'] = 1;
+    }
+      
+    
+    //$this->drupalPost();
+  }
+
+  
+  // Step 3: $role_user has edit link on all nodes, $user can view all nodes, anonymous gets nothing
+  
+  // Step 4: $role_user can grant permissions
+  //    - Edit grant form on random node, give anonymous users view access
+  
+  
+  // Step 5: creating a new content type permissions
+  
+  // Step 6: uninstalling sets everything back to normal
+  
+  
+}
